@@ -1,10 +1,308 @@
-import { Screen, ScreenHeader } from '@/components/ui/Screen';
+'use client';
 
-export default function Page() {
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Play, Pause, RotateCcw, Link2, Check } from 'lucide-react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { useApp } from '@/context/AppContext';
+import { Screen, ScreenHeader, PageFade } from '@/components/ui/Screen';
+import { Button } from '@/components/ui/Button';
+import { Chip } from '@/components/ui/Chip';
+import { Sheet } from '@/components/ui/Sheet';
+import { MomentumRing } from '@/components/ui/MomentumRing';
+import { savePomodoroSession, getPomodoroSessions } from '@/db/queries';
+import { semantic, chartHex } from '@/theme/theme';
+import { cn } from '@/lib/cn';
+
+const PRESETS = [25, 45, 60];
+
+/**
+ * Focus / Pomodoro (ui-spec.md §10).
+ *
+ * The linked habit is correlation only: per data-model.md §7 a completed
+ * session does NOT create or update a HabitLog. The user still logs the habit
+ * through the normal Log Habit flow — the link exists so the app can say
+ * "3 focus sessions against Read this week", not to silently complete a habit.
+ */
+export default function FocusPage() {
+  const { habits, userId, showToast } = useApp();
+
+  const [durationMinutes, setDuration] = useState(25);
+  const [remaining, setRemaining] = useState(25 * 60);
+  const [running, setRunning] = useState(false);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [linkedHabitId, setLinkedHabitId] = useState<number | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [justCompleted, setJustCompleted] = useState(false);
+
+  const sessions = useLiveQuery(
+    () => (userId ? getPomodoroSessions(userId) : Promise.resolve([])),
+    [userId],
+    [],
+  );
+
+  const linkedHabit = habits.find((h) => h.id === linkedHabitId) ?? null;
+  const total = durationMinutes * 60;
+  // Ring depletes as time elapses; this one is genuinely linear real-time
+  // tracking, not a spring (interaction-spec.md §10).
+  const pct = total === 0 ? 0 : (remaining / total) * 100;
+
+  const finish = useCallback(
+    async (completed: 0 | 1) => {
+      setRunning(false);
+      if (userId && startedAt) {
+        await savePomodoroSession({
+          userId,
+          habitId: linkedHabitId,
+          startTime: startedAt,
+          durationMinutes,
+          // Abandoned sessions are still recorded, flagged incomplete
+          // (user-flows.md §14).
+          completed,
+        });
+      }
+      setStartedAt(null);
+      setRemaining(durationMinutes * 60);
+      if (completed === 1) {
+        setJustCompleted(true);
+        showToast('Focus session complete');
+        setTimeout(() => setJustCompleted(false), 2500);
+      }
+    },
+    [userId, startedAt, linkedHabitId, durationMinutes, showToast],
+  );
+
+  // Tick. Uses a wall-clock deadline rather than accumulating setInterval drift.
+  const deadlineRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!running) return;
+    if (deadlineRef.current === null) deadlineRef.current = Date.now() + remaining * 1000;
+    const id = setInterval(() => {
+      const left = Math.max(0, Math.round(((deadlineRef.current ?? 0) - Date.now()) / 1000));
+      setRemaining(left);
+      if (left === 0) {
+        deadlineRef.current = null;
+        void finish(1);
+      }
+    }, 250);
+    return () => clearInterval(id);
+  }, [running, remaining, finish]);
+
+  function start() {
+    if (!startedAt) setStartedAt(new Date().toISOString());
+    deadlineRef.current = Date.now() + remaining * 1000;
+    setRunning(true);
+  }
+
+  function pause() {
+    deadlineRef.current = null;
+    setRunning(false);
+  }
+
+  function reset() {
+    deadlineRef.current = null;
+    if (startedAt) void finish(0);
+    else {
+      setRunning(false);
+      setRemaining(durationMinutes * 60);
+    }
+  }
+
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  const idle = !running && !startedAt;
+
+  const todaySessions = (sessions ?? []).filter(
+    (s) => s.startTime.slice(0, 10) === new Date().toISOString().slice(0, 10),
+  );
+
   return (
     <Screen>
-      <ScreenHeader title={'Focus'} />
-      <p className="text-body text-label-secondary">Coming up next in the build.</p>
+      <PageFade>
+        <ScreenHeader title="Focus" />
+
+        <section className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <MomentumRing
+              value={pct}
+              size={240}
+              strokeWidth={16}
+              hero={false}
+              celebrate={false}
+              fillColor={justCompleted ? semantic.positive : semantic.tint}
+              label={linkedHabit ? linkedHabit.name : undefined}
+            />
+            {/* Timer digits are the hero number on this screen — the one place
+                the display face is allowed here (design-system.md §2.2). */}
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <span className="font-display-hero text-5xl tabular-nums leading-none">
+                {mins}:{String(secs).padStart(2, '0')}
+              </span>
+              {linkedHabit && (
+                <span className="mt-2 max-w-[150px] truncate text-caption1 uppercase tracking-wide text-label-secondary">
+                  {linkedHabit.name}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div
+            role="status"
+            aria-live="polite"
+            className="min-h-[20px] text-subheadline text-label-secondary"
+          >
+            {/* Announce at minute boundaries and completion, not every tick
+                (ui-spec.md §10 assumption). */}
+            {justCompleted
+              ? 'Session complete'
+              : running
+                ? `${mins} minute${mins === 1 ? '' : 's'} remaining`
+                : startedAt
+                  ? 'Paused'
+                  : 'Ready when you are'}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button onClick={running ? pause : start}>
+              {running ? <Pause size={18} aria-hidden /> : <Play size={18} aria-hidden />}
+              {running ? 'Pause' : startedAt ? 'Resume' : 'Start'}
+            </Button>
+            <Button variant="secondary" onClick={reset} disabled={idle}>
+              <RotateCcw size={18} aria-hidden />
+              Reset
+            </Button>
+          </div>
+
+          <fieldset className="w-full">
+            <legend className="mb-2 text-center text-subheadline text-label-secondary">
+              Duration
+            </legend>
+            <div className="flex justify-center gap-2">
+              {PRESETS.map((p) => (
+                <Chip
+                  key={p}
+                  selected={durationMinutes === p}
+                  // Presets are disabled while a session is running — Reset
+                  // first to change duration (ui-spec.md §10).
+                  disabled={!idle}
+                  onSelect={() => {
+                    setDuration(p);
+                    setRemaining(p * 60);
+                  }}
+                >
+                  {p} min
+                </Chip>
+              ))}
+            </div>
+          </fieldset>
+
+          {/* Optional habit link — lowest emphasis, and settable only before
+              Start, since changing it mid-session confuses what it counted for. */}
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            disabled={!idle}
+            className={cn(
+              'flex w-full min-h-[44px] items-center gap-3 rounded-[var(--radius-card)]',
+              'bg-bg-secondary px-5 py-4 text-left transition-colors hover:bg-bg-tertiary',
+              'disabled:cursor-not-allowed disabled:opacity-40',
+            )}
+          >
+            <Link2 size={18} className="text-label-secondary" aria-hidden />
+            <span className="flex-1 text-subheadline">
+              {linkedHabit ? `Linked to ${linkedHabit.name}` : 'Link to a habit (optional)'}
+            </span>
+            {linkedHabit && (
+              <span
+                aria-hidden
+                className="size-2.5 rounded-full"
+                style={{ backgroundColor: chartHex(linkedHabit.chartColor) }}
+              />
+            )}
+          </button>
+
+          {linkedHabit && (
+            <p className="-mt-3 text-center text-footnote text-label-secondary">
+              Linking records the session against {linkedHabit.name}. It doesn&rsquo;t mark the
+              habit complete — log that separately.
+            </p>
+          )}
+        </section>
+
+        <section className="mt-10">
+          <h2 className="mb-3 text-title2 font-bold">Today&rsquo;s sessions</h2>
+          {todaySessions.length === 0 ? (
+            <p className="rounded-[var(--radius-card)] bg-bg-secondary px-5 py-6 text-center text-subheadline text-label-secondary">
+              No focus sessions yet today.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {todaySessions.map((s) => {
+                const habit = habits.find((h) => h.id === s.habitId);
+                return (
+                  <li
+                    key={s.id}
+                    className="flex items-center gap-3 rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3"
+                  >
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'inline-flex size-6 items-center justify-center rounded-full',
+                        s.completed === 1 ? 'bg-positive' : 'bg-bg-tertiary',
+                      )}
+                    >
+                      {s.completed === 1 && <Check size={14} className="text-black" />}
+                    </span>
+                    <span className="flex-1 text-subheadline">
+                      {s.durationMinutes} min{habit ? ` · ${habit.name}` : ''}
+                    </span>
+                    <span className="text-footnote text-label-secondary">
+                      {s.completed === 1 ? 'Completed' : 'Abandoned'}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </PageFade>
+
+      <Sheet
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        title="Link to a habit"
+        description="Records this session against a habit. It won't mark it complete."
+      >
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setLinkedHabitId(null);
+              setPickerOpen(false);
+            }}
+            className="min-h-[44px] rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3 text-left text-body hover:bg-bg-tertiary"
+          >
+            No habit — general focus time
+          </button>
+          {habits.map((h) => (
+            <button
+              key={h.id}
+              type="button"
+              onClick={() => {
+                setLinkedHabitId(h.id);
+                setPickerOpen(false);
+              }}
+              className="flex min-h-[44px] items-center gap-3 rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3 text-left text-body hover:bg-bg-tertiary"
+            >
+              <span
+                aria-hidden
+                className="size-2.5 rounded-full"
+                style={{ backgroundColor: chartHex(h.chartColor) }}
+              />
+              {h.name}
+            </button>
+          ))}
+        </div>
+      </Sheet>
     </Screen>
   );
 }

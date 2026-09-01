@@ -78,6 +78,46 @@ export function adaptiveDifficultySuggestion(
   return (difficultyLevel - 1) as DifficultyLevel;
 }
 
+/**
+ * Momentum value at the end of each day in `dayKeys`, replaying the same
+ * formula as `replayMomentum` so the chart can never disagree with the number
+ * on the habit card (user-flows.md §10 — the audited "82% vs four 100% rows"
+ * bug was exactly this kind of divergence).
+ *
+ * Days before the habit's first log are returned as null so Recharts leaves a
+ * gap rather than drawing a flat line back to the start of the window.
+ */
+export function momentumSeries(
+  logs: Pick<HabitLog, 'date' | 'completed'>[],
+  dayKeys: string[],
+  today: string = todayKey(),
+): (number | null)[] {
+  const byDate = new Map(logs.map((l) => [l.date, l]));
+  const firstLogged = logs.reduce<string | null>(
+    (min, l) => (min === null || l.date < min ? l.date : min),
+    null,
+  );
+
+  // Seed the running score with everything that happened before the window.
+  let score = STARTING_MOMENTUM;
+  const windowStart = dayKeys[0];
+  for (const log of [...logs].sort((a, b) => a.date.localeCompare(b.date))) {
+    if (windowStart !== undefined && log.date >= windowStart) break;
+    if (log.completed === 1) score = Math.min(MAX_MOMENTUM, score + GAIN);
+    else if (log.date < today) score = Math.max(0, score - DECAY);
+  }
+
+  return dayKeys.map((key) => {
+    const log = byDate.get(key);
+    if (log) {
+      if (log.completed === 1) score = Math.min(MAX_MOMENTUM, score + GAIN);
+      else if (key < today) score = Math.max(0, score - DECAY);
+    }
+    if (firstLogged === null || key < firstLogged) return null;
+    return score;
+  });
+}
+
 /** Ring fill color: tint, transitioning to positive as the score climbs past 70.
  *  design-system.md §1.3 momentumRing.fill */
 export function momentumIsStrong(score: number): boolean {
