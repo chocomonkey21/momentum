@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, BellOff, RefreshCw, Sparkles } from 'lucide-react';
+import { Check, BellOff, LogOut } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { Screen, PushedHeader, PageFade } from '@/components/ui/Screen';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/Sheet';
 import { updateSettings, updateUserName } from '@/db/queries';
-import { resetAndReseed, startFresh } from '@/db/seed';
 import { cn } from '@/lib/cn';
 
 type PermissionState = 'default' | 'granted' | 'denied' | 'unsupported';
@@ -22,13 +22,12 @@ type PermissionState = 'default' | 'granted' | 'denied' | 'unsupported';
  */
 export default function SettingsPage() {
   const { userName, userId, notificationsEnabled, reminderTime, settingsId, showToast } = useApp();
+  const { email, signOut } = useAuth();
 
   const [name, setName] = useState(userName);
   const [nameSaved, setNameSaved] = useState(false);
   const [permission, setPermission] = useState<PermissionState>('default');
-  const [confirmReset, setConfirmReset] = useState(false);
-  const [confirmFresh, setConfirmFresh] = useState(false);
-  const [resetting, setResetting] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   useEffect(() => setName(userName), [userName]);
 
@@ -167,28 +166,21 @@ export default function SettingsPage() {
               </span>
             </div>
             <p className="mt-2 text-footnote text-label-secondary">
-              No sign-in yet — your data lives in this browser only.
+              Synced to your account, so it follows you to any device.
             </p>
           </div>
         </section>
 
-        {/* --- Demo utility --- */}
+        {/* --- Session --- */}
         <section className="mb-8">
-          <h2 className="mb-3 text-title2 font-bold">Demo data</h2>
+          <h2 className="font-display mb-3 text-title2">Session</h2>
           <div className="rounded-[var(--radius-card)] bg-bg-secondary px-5 py-4">
-            <p className="mb-3 text-subheadline text-label-secondary">
-              Restore the sample habits, history, chains and friends to their starting state.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => setConfirmReset(true)} loading={resetting}>
-                <RefreshCw size={16} aria-hidden />
-                Reset demo data
-              </Button>
-              {/* Lets the real first-run flow be demoed without hand-editing
-                  IndexedDB (user-flows.md §1). */}
-              <Button variant="secondary" onClick={() => setConfirmFresh(true)}>
-                <Sparkles size={16} aria-hidden />
-                Start fresh
+            <p className="font-data text-[10px] text-label-tertiary">Signed in as</p>
+            <p className="mt-1 truncate text-body">{email ?? '—'}</p>
+            <div className="mt-4">
+              <Button variant="secondary" onClick={() => setConfirmSignOut(true)}>
+                <LogOut size={16} aria-hidden />
+                Log out
               </Button>
             </div>
           </div>
@@ -204,37 +196,22 @@ export default function SettingsPage() {
             </dl>
             <dl className="mt-2 flex items-center justify-between text-subheadline">
               <dt className="text-label-secondary">Storage</dt>
-              <dd>Local (IndexedDB)</dd>
+              <dd>Supabase (synced)</dd>
             </dl>
           </div>
         </section>
       </PageFade>
 
       <ConfirmDialog
-        open={confirmReset}
-        onOpenChange={setConfirmReset}
-        title="Reset demo data?"
-        body="This wipes everything stored in this browser and rebuilds the sample data. Anything you logged yourself will be lost."
-        confirmLabel="Reset"
+        open={confirmSignOut}
+        onOpenChange={setConfirmSignOut}
+        title="Log out?"
+        body="Your habits stay safely on your account — signing back in brings everything back."
+        confirmLabel="Log out"
         onConfirm={async () => {
-          setConfirmReset(false);
-          setResetting(true);
-          await resetAndReseed();
-          showToast('Demo data restored');
-          window.location.href = '/';
-        }}
-      />
-
-      <ConfirmDialog
-        open={confirmFresh}
-        onOpenChange={setConfirmFresh}
-        title="Start fresh?"
-        body="This clears everything in this browser and takes you through onboarding as a brand-new user. The sample data can be restored afterwards with Reset demo data."
-        confirmLabel="Start fresh"
-        onConfirm={async () => {
-          setConfirmFresh(false);
-          await startFresh();
-          window.location.href = '/onboarding';
+          setConfirmSignOut(false);
+          await signOut();
+          window.location.href = '/login';
         }}
       />
     </Screen>

@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useLiveQuery } from 'dexie-react-hooks';
 import { Settings as SettingsIcon, ChevronRight, Lock, Award } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
@@ -12,6 +11,7 @@ import { ErrorState, Skeleton } from '@/components/ui/States';
 import { computeAchievements, bestStreakEver, type Achievement } from '@/lib/achievements';
 import { totalCompletions, completionRate } from '@/lib/streak';
 import { getPomodoroSessions } from '@/db/queries';
+import type { PomodoroSession } from '@/db/schema';
 import { cn } from '@/lib/cn';
 import { semantic } from '@/theme/theme';
 
@@ -28,11 +28,11 @@ export default function ProfilePage() {
   const { status, errorMessage, retry, habits, allLogs, userName, userId } = useApp();
   const [detail, setDetail] = useState<Achievement | null>(null);
 
-  const sessions = useLiveQuery(
-    () => (userId ? getPomodoroSessions(userId) : Promise.resolve([])),
-    [userId],
-    [],
-  );
+  const [sessions, setSessions] = useState<PomodoroSession[]>([]);
+  useEffect(() => {
+    if (!userId) return;
+    void getPomodoroSessions(userId).then(setSessions);
+  }, [userId]);
 
   const stats = useMemo(() => {
     const bestStreak = habits.reduce((m, h) => Math.max(m, bestStreakEver(h.logs)), 0);

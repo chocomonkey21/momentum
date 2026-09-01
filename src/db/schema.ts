@@ -1,9 +1,20 @@
-import Dexie, { type Table } from 'dexie';
 import type { ChartColor } from '@/theme/theme';
 
-/** data-model.md §1 */
+/**
+ * Domain types.
+ *
+ * These are unchanged from the Dexie build on purpose: everything in src/lib/
+ * (momentum, streak, time-constraint, insights, recap) is written against these
+ * shapes, so keeping them identical means the business logic did not have to be
+ * touched by the Supabase migration.
+ *
+ * Postgres columns are snake_case and ids are uuid/bigint; the `Row` types and
+ * mappers at the bottom of this file are the only place that difference exists.
+ */
+
 export interface User {
-  id?: number;
+  /** uuid — 1:1 with Supabase auth.users. */
+  id: string;
   name: string;
   username: string | null;
   createdAt: string;
@@ -12,15 +23,14 @@ export interface User {
 export type Frequency = 'daily' | 'weekly' | 'custom';
 export type DifficultyLevel = 1 | 2 | 3;
 
-/** data-model.md §2 */
 export interface Habit {
   id?: number;
-  userId: number;
+  userId: string;
   name: string;
   frequency: Frequency;
   difficultyLevel: DifficultyLevel;
   momentumScore: number;
-  timeConstraint: string | null; // 'HH:mm', local
+  timeConstraint: string | null;
   categoryTag: string | null;
   chartColor: ChartColor;
   createdAt: string;
@@ -30,11 +40,12 @@ export interface Habit {
 export type ContextTag = 'home' | 'work' | 'gym' | 'other';
 export type MoodTag = 1 | 2 | 3 | 4 | 5;
 
-/** data-model.md §3 — one row per day a habit is acted on. */
 export interface HabitLog {
   id?: number;
   habitId: number;
-  date: string; // YYYY-MM-DD, local
+  /** YYYY-MM-DD, local. */
+  date: string;
+  /** Kept as 0/1 rather than boolean so src/lib's existing checks are unchanged. */
   completed: 0 | 1;
   moodTag: MoodTag | null;
   contextTag: ContextTag | null;
@@ -42,10 +53,9 @@ export interface HabitLog {
   loggedAt: string;
 }
 
-/** data-model.md §5 */
 export interface HabitChain {
   id?: number;
-  userId: number;
+  userId: string;
   chainName: string;
   createdAt: string;
 }
@@ -56,10 +66,9 @@ export interface ChainHabit {
   orderIndex: number;
 }
 
-/** data-model.md §7 */
 export interface PomodoroSession {
   id?: number;
-  userId: number;
+  userId: string;
   habitId: number | null;
   startTime: string;
   endTime: string | null;
@@ -67,22 +76,17 @@ export interface PomodoroSession {
   completed: 0 | 1;
 }
 
-/* ---- data-model.md §8 — Phase 2 entities.
-   Backed by SEEDED LOCAL MOCK DATA for this build (PRD.md §6 fallback:
-   "Mock/seeded friend data is an acceptable stand-in for the demo").
-   No Supabase, no auth, no real sync. ---- */
-
 export interface Friendship {
   id?: number;
-  userId: number;
-  friendUserId: number;
+  userId: string;
+  friendUserId: string;
   status: 'pending' | 'accepted';
   createdAt: string;
 }
 
 export interface Challenge {
   id?: number;
-  creatorUserId: number;
+  creatorUserId: string;
   challengeName: string;
   goalMetric: string;
   startDate: string;
@@ -91,45 +95,113 @@ export interface Challenge {
 
 export interface ChallengeParticipant {
   challengeId: number;
-  userId: number;
+  userId: string;
   progress: number;
 }
 
-/** App-local settings (Settings screen, ui-spec.md §14). Single row, id = 1. */
 export interface Settings {
-  id?: number;
+  userId: string;
   notificationsEnabled: 0 | 1;
-  reminderTime: string; // 'HH:mm'
+  reminderTime: string;
 }
 
-export class MomentumDB extends Dexie {
-  users!: Table<User, number>;
-  habits!: Table<Habit, number>;
-  habitLogs!: Table<HabitLog, number>;
-  chains!: Table<HabitChain, number>;
-  chainHabits!: Table<ChainHabit, [number, number]>;
-  pomodoroSessions!: Table<PomodoroSession, number>;
-  friendships!: Table<Friendship, number>;
-  challenges!: Table<Challenge, number>;
-  challengeParticipants!: Table<ChallengeParticipant, [number, number]>;
-  settings!: Table<Settings, number>;
+/* ------------------------------------------------------------------ *
+ * Row shapes and mappers — the only snake_case in the codebase.
+ * ------------------------------------------------------------------ */
 
-  constructor() {
-    super('momentum');
-    // Indexing per data-model.md §9.
-    this.version(1).stores({
-      users: '++id',
-      habits: '++id, userId, archivedAt',
-      habitLogs: '++id, habitId, [habitId+date], date',
-      chains: '++id, userId',
-      chainHabits: '[chainId+habitId], chainId, habitId',
-      pomodoroSessions: '++id, userId, habitId, startTime',
-      friendships: '++id, userId, friendUserId',
-      challenges: '++id, creatorUserId',
-      challengeParticipants: '[challengeId+userId], challengeId, userId',
-      settings: '++id',
-    });
-  }
+export interface HabitRow {
+  id: number;
+  user_id: string;
+  name: string;
+  frequency: Frequency;
+  difficulty_level: number;
+  momentum_score: number;
+  time_constraint: string | null;
+  category_tag: string | null;
+  chart_color: string;
+  created_at: string;
+  archived_at: string | null;
 }
 
-export const db = new MomentumDB();
+export interface HabitLogRow {
+  id: number;
+  habit_id: number;
+  date: string;
+  completed: boolean;
+  mood_tag: number | null;
+  context_tag: ContextTag | null;
+  notes: string | null;
+  logged_at: string;
+}
+
+export interface ChainRow {
+  id: number;
+  user_id: string;
+  chain_name: string;
+  created_at: string;
+}
+
+export interface ChainHabitRow {
+  chain_id: number;
+  habit_id: number;
+  order_index: number;
+}
+
+export interface PomodoroRow {
+  id: number;
+  user_id: string;
+  habit_id: number | null;
+  start_time: string;
+  end_time: string | null;
+  duration_minutes: number;
+  completed: boolean;
+}
+
+export function toHabit(r: HabitRow): Habit {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    name: r.name,
+    frequency: r.frequency,
+    difficultyLevel: r.difficulty_level as DifficultyLevel,
+    momentumScore: r.momentum_score,
+    timeConstraint: r.time_constraint,
+    categoryTag: r.category_tag,
+    chartColor: r.chart_color as ChartColor,
+    createdAt: r.created_at,
+    archivedAt: r.archived_at,
+  };
+}
+
+export function toHabitLog(r: HabitLogRow): HabitLog {
+  return {
+    id: r.id,
+    habitId: r.habit_id,
+    date: r.date,
+    completed: r.completed ? 1 : 0,
+    moodTag: (r.mood_tag as MoodTag | null) ?? null,
+    contextTag: r.context_tag,
+    notes: r.notes,
+    loggedAt: r.logged_at,
+  };
+}
+
+export function toChain(r: ChainRow): HabitChain {
+  return { id: r.id, userId: r.user_id, chainName: r.chain_name, createdAt: r.created_at };
+}
+
+export function toChainHabit(r: ChainHabitRow): ChainHabit {
+  return { chainId: r.chain_id, habitId: r.habit_id, orderIndex: r.order_index };
+}
+
+export function toPomodoro(r: PomodoroRow): PomodoroSession {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    habitId: r.habit_id,
+    startTime: r.start_time,
+    endTime: r.end_time,
+    durationMinutes: r.duration_minutes,
+    completed: r.completed ? 1 : 0,
+  };
+}

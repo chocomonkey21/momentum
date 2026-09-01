@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Play, Pause, RotateCcw, Link2, Check } from 'lucide-react';
-import { useLiveQuery } from 'dexie-react-hooks';
 import { useApp } from '@/context/AppContext';
 import { Screen, ScreenHeader, PageFade } from '@/components/ui/Screen';
 import { Button } from '@/components/ui/Button';
@@ -10,6 +9,7 @@ import { Chip } from '@/components/ui/Chip';
 import { Sheet } from '@/components/ui/Sheet';
 import { MomentumRing } from '@/components/ui/MomentumRing';
 import { savePomodoroSession, getPomodoroSessions } from '@/db/queries';
+import type { PomodoroSession } from '@/db/schema';
 import { semantic, chartHex } from '@/theme/theme';
 import { cn } from '@/lib/cn';
 
@@ -34,11 +34,14 @@ export default function FocusPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [justCompleted, setJustCompleted] = useState(false);
 
-  const sessions = useLiveQuery(
-    () => (userId ? getPomodoroSessions(userId) : Promise.resolve([])),
-    [userId],
-    [],
-  );
+  const [sessions, setSessions] = useState<PomodoroSession[]>([]);
+  const reloadSessions = useCallback(async () => {
+    if (!userId) return;
+    setSessions(await getPomodoroSessions(userId));
+  }, [userId]);
+  useEffect(() => {
+    void reloadSessions();
+  }, [reloadSessions]);
 
   const linkedHabit = habits.find((h) => h.id === linkedHabitId) ?? null;
   const total = durationMinutes * 60;
@@ -60,6 +63,7 @@ export default function FocusPage() {
           completed,
         });
       }
+      await reloadSessions();
       setStartedAt(null);
       setRemaining(durationMinutes * 60);
       if (completed === 1) {
@@ -68,7 +72,7 @@ export default function FocusPage() {
         setTimeout(() => setJustCompleted(false), 2500);
       }
     },
-    [userId, startedAt, linkedHabitId, durationMinutes, showToast],
+    [userId, startedAt, linkedHabitId, durationMinutes, showToast, reloadSessions],
   );
 
   // Tick. Uses a wall-clock deadline rather than accumulating setInterval drift.

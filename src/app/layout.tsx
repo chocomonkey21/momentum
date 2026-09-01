@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import { Righteous, Anton, Roboto_Condensed } from 'next/font/google';
 import './globals.css';
+import { AuthProvider } from '@/context/AuthContext';
 import { AppProvider } from '@/context/AppContext';
-import { BottomTabBar } from '@/components/ui/Nav';
-import { ToastHost } from '@/components/ui/Toast';
+import { AuthGate } from '@/components/ui/AuthGate';
 
 /**
  * Type system — four faces, mapped to the roles in design-system.md §2.
@@ -67,7 +67,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${wordmarkFace.variable} ${heroFace.variable} ${uiFace.variable}`}
     >
       <body className="bg-ink1 text-label-primary antialiased">
-        <AppProvider>
+        <AuthProvider>
+          <AppProvider>
           {/*
             One phone-width column at every viewport. The client asked for a
             consistent vertical app presentation rather than the responsive
@@ -77,11 +78,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             backdrop rather than empty dead space.
           */}
           <div className="relative mx-auto min-h-dvh w-full max-w-[440px] bg-bg-primary shadow-[0_0_80px_rgba(0,0,0,0.9)] sm:border-x sm:border-white/[0.06]">
-            {children}
-            <BottomTabBar />
-            <ToastHost />
+            <AuthGate>{children}</AuthGate>
           </div>
-        </AppProvider>
+          </AppProvider>
+        </AuthProvider>
       </body>
     </html>
   );

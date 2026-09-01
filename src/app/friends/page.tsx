@@ -1,7 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Users, Trophy, UserPlus, Check, Clock, Medal } from 'lucide-react';
 import { format } from 'date-fns';
 import { useApp } from '@/context/AppContext';
@@ -10,7 +9,7 @@ import { Button, IconButton } from '@/components/ui/Button';
 import { Sheet } from '@/components/ui/Sheet';
 import { EmptyState, Skeleton } from '@/components/ui/States';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import { db, type Friendship } from '@/db/schema';
+import { getFriends, getChallenges, requestFriendByUsername, type FriendRow, type ChallengeBoard } from '@/db/queries';
 import { cn } from '@/lib/cn';
 import { semantic, palette } from '@/theme/theme';
 
@@ -21,11 +20,15 @@ const AVATAR_COLORS = [palette.blue, palette.green, palette.orange, palette.purp
 /**
  * Friends & Challenges (PRD.md §7, Phase 2).
  *
- * IMPORTANT: this screen is backed entirely by SEEDED LOCAL MOCK DATA, which is
- * the fallback PRD.md §6 explicitly sanctions ("Mock/seeded friend data is an
- * acceptable stand-in for the demo"). There is no Supabase, no auth, and no
- * cross-device sync behind any of it — "adding a friend" writes a local row.
- * The UI is complete so the flow can be demoed end to end; the backend is not.
+ * Backed by real Postgres rows now, not the seeded local mock the Dexie build
+ * used. RLS makes a friendship readable from either side, so an incoming
+ * request is visible to its recipient, and a challenge leaderboard is readable
+ * by its participants.
+ *
+ * Known gap: resolving a username to an account needs a public-profile policy
+ * or a security-definer RPC, because RLS deliberately hides other users'
+ * profile rows. requestFriendByUsername() reports that honestly rather than
+ * failing silently — see the note there.
  */
 export default function FriendsPage() {
   const { status, userId, showToast } = useApp();
@@ -33,45 +36,24 @@ export default function FriendsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [username, setUsername] = useState('');
 
-  const friendships = useLiveQuery(
-    () =>
-      userId
-        ? db.friendships.where('userId').equals(userId).toArray()
-        : Promise.resolve([] as Friendship[]),
-    [userId],
-  );
-  const users = useLiveQuery(() => db.users.toArray(), []);
-  const challenges = useLiveQuery(() => db.challenges.toArray(), []);
-  const participants = useLiveQuery(() => db.challengeParticipants.toArray(), []);
+  const [friends, setFriends] = useState<FriendRow[] | null>(null);
+  const [challengeRows, setChallengeRows] = useState<ChallengeBoard[] | null>(null);
 
-  const loading =
-    status === 'loading' ||
-    !friendships ||
-    !users ||
-    !challenges ||
-    !participants;
+  const reload = useCallback(async () => {
+    if (!userId) return;
+    const [f, c] = await Promise.all([getFriends(userId), getChallenges(userId)]);
+    setFriends(f);
+    setChallengeRows(c);
+  }, [userId]);
 
-  const userById = useMemo(() => new Map((users ?? []).map((u) => [u.id, u])), [users]);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
 
-  const friendRows = useMemo(() => {
-    return (friendships ?? []).map((f) => ({
-      ...f,
-      user: userById.get(f.friendUserId),
-    }));
-  }, [friendships, userById]);
+  const loading = status === 'loading' || friends === null || challengeRows === null;
 
-  const accepted = friendRows.filter((f) => f.status === 'accepted');
-  const pending = friendRows.filter((f) => f.status === 'pending');
-
-  const challengeRows = useMemo(() => {
-    return (challenges ?? []).map((c) => {
-      const board = (participants ?? [])
-        .filter((p) => p.challengeId === c.id)
-        .map((p) => ({ ...p, user: userById.get(p.userId) }))
-        .sort((a, b) => b.progress - a.progress);
-      return { challenge: c, board };
-    });
-  }, [challenges, participants, userById]);
+  const accepted = useMemo(() => (friends ?? []).filter((f) => f.status === 'accepted'), [friends]);
+  const pending = useMemo(() => (friends ?? []).filter((f) => f.status === 'pending'), [friends]);
 
   return (
     <Screen>
@@ -84,12 +66,6 @@ export default function FriendsPage() {
             </IconButton>
           }
         />
-
-        {/* Honest about what this is — better than implying a live backend. */}
-        <p className="mb-5 rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3 text-footnote text-label-secondary">
-          Demo mode: friends and challenges run on local sample data. Real accounts and syncing
-          arrive with the Phase 2 backend.
-        </p>
 
         <div className="mb-5">
           <SegmentedControl
@@ -121,13 +97,13 @@ export default function FriendsPage() {
             <div className="flex flex-col gap-6">
               {pending.length > 0 && (
                 <section>
-                  <h2 className="mb-3 text-title2 font-bold">Pending</h2>
+                  <h2 className="font-display mb-3 text-title2">Pending</h2>
                   <ul className="flex flex-col gap-2">
                     {pending.map((f, i) => (
                       <li key={f.id}>
-                        <FriendRow
-                          name={f.user?.name ?? 'Unknown'}
-                          username={f.user?.username ?? null}
+                        <FriendRowItem
+                          name={f.name}
+                          username={f.username}
                           colorIndex={i}
                           trailing={
                             <span className="inline-flex items-center gap-1.5 text-footnote text-label-secondary">
@@ -143,13 +119,13 @@ export default function FriendsPage() {
               )}
 
               <section>
-                <h2 className="mb-3 text-title2 font-bold">Your friends</h2>
+                <h2 className="font-display mb-3 text-title2">Your friends</h2>
                 <ul className="flex flex-col gap-2">
                   {accepted.map((f, i) => (
                     <li key={f.id}>
-                      <FriendRow
-                        name={f.user?.name ?? 'Unknown'}
-                        username={f.user?.username ?? null}
+                      <FriendRowItem
+                        name={f.name}
+                        username={f.username}
                         colorIndex={i}
                         trailing={
                           <span className="inline-flex items-center gap-1.5 text-footnote text-positive">
@@ -171,13 +147,13 @@ export default function FriendsPage() {
           />
         ) : (
           <ul className="flex flex-col gap-4">
-            {challengeRows.map(({ challenge, board }) => (
+            {challengeRows.map((challenge) => (
               <li key={challenge.id}>
                 <section className="rounded-[var(--radius-card)] bg-bg-secondary p-5">
                   <div className="mb-1 flex items-start gap-3">
                     <Trophy size={20} className="mt-0.5 shrink-0 text-warning" aria-hidden />
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-headline font-semibold">{challenge.challengeName}</h2>
+                      <h2 className="font-display text-[17px]">{challenge.challengeName}</h2>
                       <p className="mt-0.5 text-footnote text-label-secondary">
                         {challenge.goalMetric} ·{' '}
                         {format(new Date(challenge.startDate + 'T00:00:00'), 'd MMM')} –{' '}
@@ -187,11 +163,11 @@ export default function FriendsPage() {
                   </div>
 
                   <ol className="mt-4 flex flex-col gap-2">
-                    {board.map((p, rank) => {
+                    {challenge.board.map((p, rank) => {
                       const isYou = p.userId === userId;
-                      const max = board[0]?.progress || 1;
+                      const max = challenge.board[0]?.progress || 1;
                       return (
-                        <li key={`${p.challengeId}-${p.userId}`}>
+                        <li key={`${challenge.id}-${p.userId}`}>
                           <div className="flex items-center gap-3">
                             <span
                               className={cn(
@@ -207,7 +183,7 @@ export default function FriendsPage() {
                                 isYou && 'font-semibold',
                               )}
                             >
-                              {isYou ? 'You' : (p.user?.name ?? 'Unknown')}
+                              {p.name}
                             </span>
                             <span className="text-subheadline tabular-nums">{p.progress}</span>
                           </div>
@@ -240,7 +216,7 @@ export default function FriendsPage() {
         open={addOpen}
         onOpenChange={setAddOpen}
         title="Add a friend"
-        description="In this demo build, adding a friend creates a local sample record — nothing is sent anywhere."
+        description="Send a request by username."
       >
         <div className="flex flex-col gap-4">
           <div>
@@ -264,21 +240,13 @@ export default function FriendsPage() {
             disabled={username.trim().length === 0}
             onClick={async () => {
               if (!userId) return;
-              const handle = username.trim();
-              const friendUserId = await db.users.add({
-                name: handle,
-                username: handle,
-                createdAt: new Date().toISOString(),
-              });
-              await db.friendships.add({
-                userId,
-                friendUserId,
-                status: 'pending',
-                createdAt: new Date().toISOString(),
-              });
-              setUsername('');
-              setAddOpen(false);
-              showToast(`Request sent to ${handle}`);
+              const result = await requestFriendByUsername(userId, username);
+              showToast(result.message);
+              if (result.ok) {
+                setUsername('');
+                setAddOpen(false);
+                await reload();
+              }
             }}
           >
             Send request
@@ -289,7 +257,7 @@ export default function FriendsPage() {
   );
 }
 
-function FriendRow({
+function FriendRowItem({
   name,
   username,
   colorIndex,
