@@ -43,6 +43,13 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/profile', label: 'Profile', icon: User, mobile: false },
 ];
 
+/** Onboarding is a pre-nav flow — it has its own back stack and step indicator,
+ *  and showing the tab bar there would let a first-time user escape the flow
+ *  into empty screens (CLAUDE.md §3). */
+function hideNav(pathname: string) {
+  return pathname.startsWith('/onboarding');
+}
+
 function isActive(pathname: string, href: string) {
   if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(href + '/');
@@ -51,6 +58,7 @@ function isActive(pathname: string, href: string) {
 export function BottomTabBar() {
   const pathname = usePathname();
   const items = NAV_ITEMS.filter((i) => i.mobile);
+  if (hideNav(pathname)) return null;
 
   return (
     <nav
@@ -89,6 +97,7 @@ export function BottomTabBar() {
 
 export function Sidebar() {
   const pathname = usePathname();
+  if (hideNav(pathname)) return null;
 
   return (
     <nav

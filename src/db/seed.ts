@@ -272,8 +272,35 @@ async function seedFriends(userId: number) {
   ]);
 }
 
+/**
+ * Set when the user deliberately chooses "Start fresh" in Settings, so the
+ * seeder doesn't immediately refill the database they just emptied and send
+ * them straight past onboarding.
+ */
+const SUPPRESS_KEY = 'momentum:suppress-seed';
+
+function seedSuppressed(): boolean {
+  try {
+    return localStorage.getItem(SUPPRESS_KEY) === '1';
+  } catch {
+    // Private mode or blocked storage — fall back to seeding, which is the
+    // better default for a demo build.
+    return false;
+  }
+}
+
+function setSeedSuppressed(value: boolean) {
+  try {
+    if (value) localStorage.setItem(SUPPRESS_KEY, '1');
+    else localStorage.removeItem(SUPPRESS_KEY);
+  } catch {
+    /* storage unavailable — nothing to do */
+  }
+}
+
 /** Idempotent: only seeds when the database is genuinely empty. */
 export async function seedIfEmpty(): Promise<boolean> {
+  if (seedSuppressed()) return false;
   const habitCount = await db.habits.count();
   if (habitCount > 0) return false;
 
@@ -289,7 +316,19 @@ export async function seedIfEmpty(): Promise<boolean> {
 
 /** Wipe and reseed — exposed on Settings so a demo can be reset in one tap. */
 export async function resetAndReseed(): Promise<void> {
+  setSeedSuppressed(false);
   await db.delete();
   await db.open();
   await seedIfEmpty();
+}
+
+/**
+ * Wipe to a genuinely empty state and keep it empty, so the real first-time-user
+ * flow (user-flows.md §1) can be demoed. Without the suppression flag the seeder
+ * would refill the database on the very next boot and skip onboarding entirely.
+ */
+export async function startFresh(): Promise<void> {
+  setSeedSuppressed(true);
+  await db.delete();
+  await db.open();
 }
