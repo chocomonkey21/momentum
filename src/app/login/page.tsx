@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
@@ -33,9 +33,17 @@ export default function LoginPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  /**
+   * A brand-new signup returns a live session, which flips `status` to
+   * signedIn and would send this effect racing the onboarding redirect below —
+   * and it won. New users skipped goal selection entirely and landed on an
+   * empty Home. This flag lets the signup path own its own redirect.
+   */
+  const signingUp = useRef(false);
+
   // Already signed in (persisted session) — don't sit on the login screen.
   useEffect(() => {
-    if (status === 'signedIn') router.replace('/');
+    if (status === 'signedIn' && !signingUp.current) router.replace('/');
   }, [status, router]);
 
   async function submit() {
@@ -51,6 +59,7 @@ export default function LoginPage() {
         await signIn(email, password);
         router.replace('/');
       } else {
+        signingUp.current = true;
         const { needsConfirmation } = await signUp(email, password, name || email.split('@')[0]);
         if (needsConfirmation) {
           // "Confirm email" is still on in Supabase Auth settings. Say so
@@ -58,6 +67,7 @@ export default function LoginPage() {
           setNotice(
             'Account created, but this project still requires email confirmation. Check your inbox, then sign in.',
           );
+          signingUp.current = false;
           setMode('signIn');
         } else {
           // New account -> pick goals and first habits (user-flows.md §1).
@@ -65,6 +75,7 @@ export default function LoginPage() {
         }
       }
     } catch (e) {
+      signingUp.current = false;
       setError(e instanceof Error ? e.message : 'Something went wrong. Try again.');
     } finally {
       setBusy(false);
