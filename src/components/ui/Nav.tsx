@@ -1,0 +1,135 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Home, ListChecks, Link2, Timer, BarChart3, CalendarDays, Users, User } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/cn';
+
+/**
+ * Nav — bottom tab bar on mobile/tablet, persistent left sidebar on desktop
+ * (design-system.md §3, ui-spec.md global note). Every item has a LABEL next to
+ * or under its icon; icon-only nav was an audit finding (design-system.md §7).
+ *
+ * ASSUMPTION — resolving a genuine conflict between two source docs:
+ * design-system.md §7 specifies a 5-item tab bar, but ui-spec.md assigns its own
+ * nav item to Home, Habits, Chains, Focus, Statistics AND Profile (§9, §13),
+ * with Weekly Recap explicitly NOT a tab (§12), plus Friends & Challenges added
+ * for this build. Eight destinations cannot be a 5-item tab bar.
+ * Resolution: mobile/tablet keeps exactly the 5 daily-cadence destinations the
+ * design system allows; the desktop sidebar — which has vertical room the tab
+ * bar doesn't — carries all eight. The three that drop off on mobile (Recap,
+ * Friends, Profile) each keep a visible, non-orphaned entry point in the Home
+ * header or on Profile, so no screen is a dead end at any width
+ * (CLAUDE.md §3 wayfinding).
+ */
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  /** Present in the 5-item mobile tab bar. */
+  mobile: boolean;
+}
+
+export const NAV_ITEMS: NavItem[] = [
+  { href: '/', label: 'Home', icon: Home, mobile: true },
+  { href: '/habits', label: 'Habits', icon: ListChecks, mobile: true },
+  { href: '/chains', label: 'Chains', icon: Link2, mobile: true },
+  { href: '/focus', label: 'Focus', icon: Timer, mobile: true },
+  { href: '/stats', label: 'Stats', icon: BarChart3, mobile: true },
+  { href: '/recap', label: 'Recap', icon: CalendarDays, mobile: false },
+  { href: '/friends', label: 'Friends', icon: Users, mobile: false },
+  { href: '/profile', label: 'Profile', icon: User, mobile: false },
+];
+
+function isActive(pathname: string, href: string) {
+  if (href === '/') return pathname === '/';
+  return pathname === href || pathname.startsWith(href + '/');
+}
+
+export function BottomTabBar() {
+  const pathname = usePathname();
+  const items = NAV_ITEMS.filter((i) => i.mobile);
+
+  return (
+    <nav
+      aria-label="Primary"
+      // Translucent + blur so content scrolls visibly underneath (design-system.md §4).
+      className={cn(
+        'fixed inset-x-0 bottom-0 z-40 border-t border-white/10',
+        'bg-black/85 backdrop-blur-xl lg:hidden',
+      )}
+    >
+      <ul className="mx-auto flex max-w-2xl items-stretch justify-around">
+        {items.map((item) => {
+          const active = isActive(pathname, item.href);
+          const Icon = item.icon;
+          return (
+            <li key={item.href} className="flex-1">
+              <Link
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'flex min-h-[64px] flex-col items-center justify-center gap-1 px-1 py-2',
+                  'text-[length:var(--text-caption1)] transition-colors',
+                  active ? 'text-tint' : 'text-label-secondary hover:text-white',
+                )}
+              >
+                <Icon size={22} strokeWidth={active ? 2.5 : 2} aria-hidden />
+                <span>{item.label}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+export function Sidebar() {
+  const pathname = usePathname();
+
+  return (
+    <nav
+      aria-label="Primary"
+      className={cn(
+        'fixed inset-y-0 left-0 z-40 hidden w-60 flex-col gap-1 border-r border-white/10',
+        'bg-black/85 px-4 py-6 backdrop-blur-xl lg:flex',
+      )}
+    >
+      {/* Wordmark — one of the three scoped display-face moments. */}
+      <Link
+        href="/"
+        className="mb-6 px-3 font-display text-2xl tracking-tight text-label-primary"
+        aria-label="Momentum, go to Home"
+      >
+        MOMENTUM
+      </Link>
+      <ul className="flex flex-col gap-1">
+        {NAV_ITEMS.map((item) => {
+          const active = isActive(pathname, item.href);
+          const Icon = item.icon;
+          return (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'flex min-h-[44px] items-center gap-3 rounded-[var(--radius-chip)] px-3',
+                  'text-subheadline transition-colors',
+                  active
+                    ? 'bg-tint/15 font-semibold text-tint'
+                    : 'text-label-secondary hover:bg-bg-secondary hover:text-tint',
+                )}
+              >
+                <Icon size={20} strokeWidth={active ? 2.5 : 2} aria-hidden />
+                <span>{item.label}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
