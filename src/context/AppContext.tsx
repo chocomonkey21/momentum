@@ -89,6 +89,8 @@ interface AppValue {
     },
   ) => Promise<void>;
   removeHabit: (habitId: number) => Promise<void>;
+  /** Chain names this habit belongs to — surfaced in delete copy (user-flows.md §8). */
+  chainNamesForHabit: (habitId: number) => string[];
   /** Force a momentum replay for one habit — used after a historical edit. */
   refreshHabit: (habitId: number) => Promise<void>;
 }
@@ -96,7 +98,7 @@ interface AppValue {
 const AppContext = createContext<AppValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<Status>('loading');
+  const [bootStatus, setBootStatus] = useState<Status>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -108,7 +110,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        setStatus('loading');
+        setBootStatus('loading');
         setErrorMessage(null);
         await seedIfEmpty();
         const id = await q.ensureUser();
@@ -116,14 +118,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await q.getSettings();
         if (cancelled) return;
         setUserId(id);
-        setStatus('ready');
+        setBootStatus('ready');
       } catch (err) {
         if (cancelled) return;
         console.error('[Momentum] boot failed', err);
         setErrorMessage(
           "We couldn't open your local habit database. Your data is still saved in this browser.",
         );
-        setStatus('error');
+        setBootStatus('error');
       }
     })();
     return () => {
@@ -134,16 +136,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const retry = useCallback(() => setAttempt((a) => a + 1), []);
 
   const user = useLiveQuery(() => (userId ? db.users.get(userId) : undefined), [userId]);
-  const rawHabits = useLiveQuery(
-    () => (userId ? q.getActiveHabits(userId) : Promise.resolve([])),
-    [userId],
-    [] as Habit[],
-  );
-  const habitIds = useMemo(
-    () => (rawHabits ?? []).map((h) => h.id).filter((x): x is number => typeof x === 'number'),
-    [rawHabits],
-  );
-  const allLogs = useLiveQuery(() => q.getAllLogs(habitIds), [habitIds.join(',')], [] as HabitLog[]);
+  /**
+   * Habits and their logs are fetched in ONE live query, not two chained ones.
+   *
+   * Chaining them (habits -> derive ids -> query logs by id) produces a render
+   * where habits have resolved but their logs haven't, because the logs query
+   * resolves instantly against the still-empty id list. Anything that reads a
+   * habit's history during that render sees zero logs — which silently broke
+   * the Mood Calendar's initial month and would break any future component that
+   * initialises state from history. Fetching both together makes the pair
+   * atomic: either we have both, or we're still loading.
+   *
+   * No default value, so `undefined` genuinely means "not resolved yet" rather
+   * than "empty", which is what the loading/empty distinction depends on.
+   */
+  const data = useLiveQuery(async () => {
+    if (!userId) return undefined;
+    const habitRows = await q.getActiveHabits(userId);
+    const ids = habitRows.map((h) => h.id).filter((x): x is number => typeof x === 'number');
+    const logRows = await q.getAllLogs(ids);
+    return { habitRows, logRows };
+  }, [userId]);
+
+  const rawHabits = data?.habitRows;
+  const allLogs = data?.logRows;
   const chains = useLiveQuery(
     () => (userId ? q.getChains(userId) : Promise.resolve([])),
     [userId],
@@ -152,6 +168,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const chainMembers = useLiveQuery(() => q.getAllChainMembers(), [], [] as ChainHabit[]);
   // Read-only variant: a liveQuery runs in a readonly transaction.
   const settings = useLiveQuery(() => q.readSettings(), []);
+
+  /**
+   * The status screens actually consume stays 'loading' until the boot sequence
+   * has finished AND the habit/log live queries have resolved at least once.
+   * Without this second condition there is a gap where boot is 'ready' but the
+   * queries are still undefined, and every screen renders its empty state for a
+   * frame before the real data lands.
+   */
+  const status: Status =
+    bootStatus === 'error'
+      ? 'error'
+      : bootStatus === 'loading' || rawHabits === undefined || allLogs === undefined
+        ? 'loading'
+        : 'ready';
 
   const today = todayKey();
 
@@ -271,6 +301,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [showToast],
   );
 
+  const chainNamesForHabit = useCallback(
+    (habitId: number) => {
+      const ids = new Set(
+        (chainMembers ?? []).filter((m) => m.habitId === habitId).map((m) => m.chainId),
+      );
+      return (chains ?? []).filter((c) => c.id && ids.has(c.id)).map((c) => c.chainName);
+    },
+    [chainMembers, chains],
+  );
+
   const value: AppValue = {
     status,
     errorMessage,
@@ -292,6 +332,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addHabit,
     editHabit,
     removeHabit,
+    chainNamesForHabit,
     refreshHabit,
   };
 
