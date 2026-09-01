@@ -18,6 +18,19 @@ export function yesterdayKey(): string {
   return toDayKey(addDays(new Date(), -1));
 }
 
+/**
+ * The day key immediately before `key`, in LOCAL time.
+ *
+ * Deliberately not `new Date(key).toISOString().slice(0, 10)`: toISOString
+ * converts to UTC, so at any positive UTC offset a local midnight lands on the
+ * previous calendar day and every backward day-walk (streaks, miss streaks)
+ * silently skips a day. data-model.md §0 fixes the day boundary at LOCAL
+ * midnight, so all day arithmetic has to stay local.
+ */
+export function previousDayKey(key: string): string {
+  return toDayKey(addDays(dayKeyToDate(key), -1));
+}
+
 export function dayKeyToDate(key: string): Date {
   // parseISO on a bare date string yields local midnight, which is what we want.
   return parseISO(key);

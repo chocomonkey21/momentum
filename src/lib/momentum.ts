@@ -1,5 +1,5 @@
 import type { HabitLog, DifficultyLevel } from '@/db/schema';
-import { todayKey } from './dates';
+import { todayKey, previousDayKey } from './dates';
 
 /** data-model.md §4.1 — the core mechanic. Exact constants, not approximations. */
 export const MAX_MOMENTUM = 100;
@@ -63,9 +63,7 @@ export function missStreak(
     if (expected !== null && log.date !== expected) break; // gap
     if (log.completed === 1) break;
     count += 1;
-    const d = new Date(log.date + 'T00:00:00');
-    d.setDate(d.getDate() - 1);
-    expected = d.toISOString().slice(0, 10);
+    expected = previousDayKey(log.date);
   }
   return count;
 }

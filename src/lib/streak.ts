@@ -1,5 +1,5 @@
 import type { HabitLog } from '@/db/schema';
-import { todayKey } from './dates';
+import { todayKey, previousDayKey } from './dates';
 
 /**
  * data-model.md §4.2 — `currentStreak` is a DISPLAY metric, derived, and
@@ -19,9 +19,7 @@ export function currentStreak(
     if (expected !== null && log.date !== expected) break; // a gap ends the streak
     if (log.completed !== 1) break;
     count += 1;
-    const d = new Date(log.date + 'T00:00:00');
-    d.setDate(d.getDate() - 1);
-    expected = d.toISOString().slice(0, 10);
+    expected = previousDayKey(log.date);
   }
   return count;
 }

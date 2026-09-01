@@ -51,7 +51,7 @@ interface SeedHabit {
 
 const SEED_HABITS: SeedHabit[] = [
   {
-    // Time-constrained + a live 3-day miss streak, so Habit Detail shows the
+    // Time-constrained + a live 4-day miss streak, so Habit Detail shows the
     // adaptive-difficulty suggestion (data-model.md §4.5) and Log Habit shows
     // the locked state (ui-spec.md §8) after 09:00 local.
     name: 'Morning Run',
@@ -59,9 +59,9 @@ const SEED_HABITS: SeedHabit[] = [
     frequency: 'daily',
     difficulty: 3,
     timeConstraint: '09:00',
-    rate: 0.55,
+    rate: 0.66,
     contexts: ['other', 'gym'],
-    forcedMisses: [1, 2, 3],
+    forcedMisses: [1, 2, 3, 4],
   },
   {
     name: 'Read 20 Pages',
@@ -69,9 +69,9 @@ const SEED_HABITS: SeedHabit[] = [
     frequency: 'daily',
     difficulty: 2,
     timeConstraint: null,
-    rate: 0.78,
+    rate: 0.66,
     contexts: ['home', 'work'],
-    forcedHits: [1, 2, 4, 5],
+    forcedHits: [1, 2, 5],
   },
   {
     name: 'Meditate',
@@ -79,9 +79,10 @@ const SEED_HABITS: SeedHabit[] = [
     frequency: 'daily',
     difficulty: 1,
     timeConstraint: null,
-    rate: 0.86,
+    rate: 0.68,
     contexts: ['home'],
-    forcedHits: [1, 2, 3],
+    forcedHits: [1, 2, 3, 4],
+    forcedMisses: [6, 7, 8],
   },
   {
     name: 'Journal',
@@ -89,8 +90,10 @@ const SEED_HABITS: SeedHabit[] = [
     frequency: 'daily',
     difficulty: 2,
     timeConstraint: null,
-    rate: 0.48,
+    rate: 0.6,
     contexts: ['home', 'work'],
+    forcedHits: [1, 2, 4, 5, 8],
+    forcedMisses: [3],
   },
 ];
 

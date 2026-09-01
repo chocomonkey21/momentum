@@ -288,8 +288,17 @@ export async function getPomodoroSessions(userId: number) {
  * Settings
  * ------------------------------------------------------------------ */
 
+/**
+ * Read-only. Safe to call from a Dexie liveQuery — a liveQuery runs in a
+ * readonly transaction, so anything that writes will throw ReadOnlyError.
+ */
+export async function readSettings() {
+  return db.settings.toCollection().first();
+}
+
+/** Read-or-create. Call this from the boot effect only, never from a liveQuery. */
 export async function getSettings() {
-  const s = await db.settings.toCollection().first();
+  const s = await readSettings();
   if (s) return s;
   const id = await db.settings.add({ notificationsEnabled: 0, reminderTime: '08:00' });
   return db.settings.get(id);

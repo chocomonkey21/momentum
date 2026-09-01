@@ -2,12 +2,23 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Habit, type HabitLog, type HabitChain, type ChainHabit } from '@/db/schema';
+import {
+  db,
+  type Habit,
+  type HabitLog,
+  type HabitChain,
+  type ChainHabit,
+  type MoodTag,
+  type ContextTag,
+  type Frequency,
+  type DifficultyLevel,
+} from '@/db/schema';
 import * as q from '@/db/queries';
 import { seedIfEmpty } from '@/db/seed';
 import { todayKey } from '@/lib/dates';
 import { currentStreak } from '@/lib/streak';
 import { missStreak } from '@/lib/momentum';
+import { canLogToday } from '@/lib/timeConstraint';
 
 /**
  * One state approach for the whole app: React Context + hooks (CLAUDE.md §6).
@@ -28,6 +39,8 @@ export interface HabitView extends Habit {
   streak: number;
   missStreak: number;
   isDueToday: boolean;
+  /** True once today's time constraint has passed (data-model.md §4.3). */
+  locked: boolean;
 }
 
 interface AppValue {
@@ -48,6 +61,35 @@ interface AppValue {
   showToast: (message: string, actionLabel?: string, onAction?: () => void) => void;
   dismissToast: () => void;
   setCompletion: (habitId: number, completed: boolean) => Promise<void>;
+  saveLog: (
+    habitId: number,
+    draft: {
+      completed: boolean;
+      moodTag: MoodTag | null;
+      contextTag: ContextTag | null;
+      notes: string | null;
+    },
+    date?: string,
+  ) => Promise<void>;
+  addHabit: (draft: {
+    name: string;
+    frequency: Frequency;
+    difficultyLevel: DifficultyLevel;
+    timeConstraint: string | null;
+    categoryTag: string | null;
+  }) => Promise<void>;
+  editHabit: (
+    habitId: number,
+    draft: {
+      name: string;
+      frequency: Frequency;
+      difficultyLevel: DifficultyLevel;
+      timeConstraint: string | null;
+      categoryTag: string | null;
+    },
+  ) => Promise<void>;
+  removeHabit: (habitId: number) => Promise<void>;
+  /** Force a momentum replay for one habit — used after a historical edit. */
   refreshHabit: (habitId: number) => Promise<void>;
 }
 
@@ -108,7 +150,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [] as HabitChain[],
   );
   const chainMembers = useLiveQuery(() => q.getAllChainMembers(), [], [] as ChainHabit[]);
-  const settings = useLiveQuery(() => q.getSettings(), []);
+  // Read-only variant: a liveQuery runs in a readonly transaction.
+  const settings = useLiveQuery(() => q.readSettings(), []);
 
   const today = todayKey();
 
@@ -130,6 +173,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           streak: currentStreak(logs, today),
           missStreak: missStreak(logs, today),
           isDueToday: q.isDueOn(h, today),
+          // Already-completed habits never render as locked — the lockout only
+          // blocks *marking* something done after the deadline (§4.3).
+          locked: !canLogToday(h.timeConstraint) && logs.find((l) => l.date === today)?.completed !== 1,
         };
       });
   }, [rawHabits, allLogs, today]);
@@ -172,6 +218,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [showToast],
   );
 
+  /** Detailed log path (Log Habit sheet), including mood/context/notes. */
+  const saveLog = useCallback<AppValue['saveLog']>(
+    async (habitId, draft, date) => {
+      try {
+        await q.upsertLog({
+          habitId,
+          date: date ?? todayKey(),
+          completed: draft.completed ? 1 : 0,
+          moodTag: draft.moodTag,
+          contextTag: draft.contextTag,
+          notes: draft.notes,
+        });
+        await q.recomputeMomentum(habitId);
+        showToast(draft.completed ? 'Entry saved' : 'Marked as skipped');
+      } catch (err) {
+        console.error('[Momentum] failed to save log', err);
+        showToast("Couldn't save your entry", 'Retry', () => {
+          void saveLog(habitId, draft, date);
+        });
+      }
+    },
+    [showToast],
+  );
+
+  const addHabit = useCallback<AppValue['addHabit']>(
+    async (draft) => {
+      if (!userId) return;
+      await q.createHabit({ userId, ...draft });
+      showToast('Habit created');
+    },
+    [userId, showToast],
+  );
+
+  const editHabit = useCallback<AppValue['editHabit']>(
+    async (habitId, draft) => {
+      // Momentum and history are never reset by an edit (data-model.md §6).
+      await q.updateHabit(habitId, draft);
+      showToast('Changes saved');
+    },
+    [showToast],
+  );
+
+  const removeHabit = useCallback<AppValue['removeHabit']>(
+    async (habitId) => {
+      await q.archiveHabit(habitId);
+      // Soft delete makes undo cheap (user-flows.md §8).
+      showToast('Habit removed', 'Undo', () => {
+        void q.unarchiveHabit(habitId);
+      });
+    },
+    [showToast],
+  );
+
   const value: AppValue = {
     status,
     errorMessage,
@@ -189,6 +288,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     showToast,
     dismissToast,
     setCompletion,
+    saveLog,
+    addHabit,
+    editHabit,
+    removeHabit,
     refreshHabit,
   };
 
