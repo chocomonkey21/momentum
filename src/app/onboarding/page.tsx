@@ -121,12 +121,13 @@ export default function OnboardingPage() {
             transition={reduce ? reducedFade : spring.default}
             className="flex flex-1 flex-col items-center justify-center text-center"
           >
-            {/* Wordmark — scoped display-face moment #1. */}
+            {/* Wordmark — the one screen with its own dedicated face. */}
             <motion.h1
               initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08, ...(reduce ? reducedFade : spring.default) }}
-              className="font-display text-6xl tracking-tight"
+              // Righteous 50px — the splash wordmark, design-system.md §2.2.
+              className="font-wordmark"
             >
               MOMENTUM
             </motion.h1>

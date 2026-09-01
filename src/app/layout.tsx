@@ -1,51 +1,50 @@
 import type { Metadata, Viewport } from 'next';
-import { Archivo, Inter, JetBrains_Mono } from 'next/font/google';
+import { Righteous, Anton, Roboto_Condensed } from 'next/font/google';
 import './globals.css';
 import { AppProvider } from '@/context/AppContext';
 import { BottomTabBar } from '@/components/ui/Nav';
 import { ToastHost } from '@/components/ui/Toast';
 
 /**
- * Type system — three faces, three distinct jobs.
+ * Type system — four faces, mapped to the roles in design-system.md §2.
  *
- *  Archivo (700–900) — the display voice. A grotesque with slightly squared
- *    terminals and tight apertures that stays confident at 72px without the
- *    novelty of a true condensed/impact face. Screen titles, hero numerals,
- *    onboarding headlines.
- *  Inter (400–600) — the UI voice. Optimised for small sizes, so list rows,
- *    buttons, body copy and metadata stay quiet and legible under the display
- *    face rather than competing with it.
- *  JetBrains Mono (500) — the data voice. Uppercase, wide-tracked, used only
- *    for axis labels, stat eyebrows and metric footers so numeric surfaces read
- *    as instrumentation.
+ *  Righteous 400   — the splash wordmark ONLY, at 50px. §2.2's scoped brand
+ *                    moment: one screen, one face, used nowhere else.
+ *  Anton 400       — hero numerals. The §2.2 "brand display face" moments:
+ *                    momentum score, streak counts, timer digits.
+ *  Roboto Condensed 700 — the bold rows of the §2.1 scale: Large Title,
+ *                    Title 2, Headline.
+ *  Roboto Condensed 300 — the regular rows: Body, Subheadline, Footnote,
+ *                    Caption 1.
  *
- * Archivo and Inter share grotesque skeletons, so the pairing reads as one
- * family with a weight jump rather than two competing personalities; the mono
- * supplies the contrast.
+ * Only the families changed; every size and letter-spacing rule still comes
+ * from design-system.md §2.
  *
- * This supersedes design-system.md §2.2's condensed/impact face and its
- * three-moment restriction, per an explicit direction change from the client
- * with visual references. The scoping principle survives — the display face is
- * still never used on list rows or body copy.
+ * Note on the data/eyebrow role: the previous build used a monospace face for
+ * axis labels and stat captions. §2 defines no mono role and this brief
+ * replaces the type choices wholesale, so that role now renders in Roboto
+ * Condensed Light, keeping its instrumentation read through uppercase and
+ * wide tracking rather than through a fifth family.
  */
-const displayFace = Archivo({
-  weight: ['600', '700', '800'],
+const wordmarkFace = Righteous({
+  weight: '400',
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-archivo',
+  variable: '--font-wordmark',
 });
 
-const uiFace = Inter({
+const heroFace = Anton({
+  weight: '400',
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-inter',
+  variable: '--font-hero',
 });
 
-const dataFace = JetBrains_Mono({
-  weight: ['400', '500', '700'],
+const uiFace = Roboto_Condensed({
+  weight: ['300', '400', '700'],
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-mono-face',
+  variable: '--font-condensed',
 });
 
 export const metadata: Metadata = {
@@ -65,7 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${displayFace.variable} ${uiFace.variable} ${dataFace.variable}`}
+      className={`${wordmarkFace.variable} ${heroFace.variable} ${uiFace.variable}`}
     >
       <body className="bg-ink1 text-label-primary antialiased">
         <AppProvider>

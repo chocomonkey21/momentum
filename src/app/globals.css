@@ -61,9 +61,13 @@
   --text-footnote: 0.8125rem;   /* 13 */
   --text-caption1: 0.6875rem;   /* 11 */
 
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: var(--font-archivo), var(--font-inter), system-ui, sans-serif;
-  --font-mono: var(--font-mono-face), ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Families only — sizes and tracking still come from design-system.md §2. */
+  --font-sans: var(--font-condensed), "Roboto Condensed", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: var(--font-condensed), "Roboto Condensed", system-ui, sans-serif;
+  --font-hero-face: var(--font-hero), "Anton", Impact, sans-serif;
+  --font-wordmark-face: var(--font-wordmark), "Righteous", system-ui, sans-serif;
+  /* The former mono role now rides on the condensed light face; see layout.tsx. */
+  --font-mono: var(--font-condensed), "Roboto Condensed", sans-serif;
 }
 
 html {
@@ -74,33 +78,45 @@ html {
 body {
   background-color: var(--color-bg-primary);
   color: var(--color-label-primary);
+  /* Body / Subheadline / Footnote / Caption -> Roboto Condensed Light. */
   font-family: var(--font-sans);
-  font-feature-settings: "cv11", "ss01";
+  font-weight: 300;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 /* ---- Typographic roles -------------------------------------------- */
 
-/* Display: Archivo at heavy weights with tight optical tracking.
-   Used for screen titles, hero numerals and onboarding headlines. */
+/* Large Title / Title 2 / Headline -> Roboto Condensed Bold. */
 .font-display {
   font-family: var(--font-display);
-  font-weight: 800;
-  letter-spacing: -0.028em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
+
+/* Hero numerals -> Anton. design-system.md §2.2: tighten large display
+   numbers; Anton is already narrow, so it takes less negative tracking than a
+   normal-width grotesque would. */
 .font-display-hero {
-  font-family: var(--font-display);
-  font-weight: 800;
-  letter-spacing: -0.045em; /* large numerals need more negative tracking */
+  font-family: var(--font-hero-face);
+  font-weight: 400;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
-/* Data face: monospace, uppercase, wide — the "Resource Overview" register.
-   Reserved for axis labels, stat eyebrows and metric footers. */
+
+/* Splash wordmark -> Righteous, 50px. The one screen with its own face. */
+.font-wordmark {
+  font-family: var(--font-wordmark-face);
+  font-weight: 400;
+  font-size: 50px;
+  letter-spacing: 0.01em;
+}
+/* Eyebrows, axis labels and metric captions. Keeps the instrumentation read
+   through uppercase and wide tracking now that the mono face is gone. */
 .font-data {
-  font-family: var(--font-mono);
-  font-weight: 500;
-  letter-spacing: 0.08em;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 .tnum {
