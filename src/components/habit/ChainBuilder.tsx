@@ -67,7 +67,7 @@ export function ChainBuilder({
     >
       <div className="flex flex-col gap-6">
         <div>
-          <label htmlFor="chain-name" className="mb-2 block text-subheadline text-label-secondary">
+          <label htmlFor="chain-name" className="font-data mb-2 block text-[10px] text-label-tertiary">
             Chain name
           </label>
           <input
@@ -77,7 +77,7 @@ export function ChainBuilder({
             onChange={(e) => setName(e.target.value)}
             placeholder="Morning Routine"
             className={cn(
-              'w-full rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3',
+              'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-3.5',
               'text-body text-label-primary placeholder:text-label-tertiary',
               'border border-transparent transition-colors focus:border-tint',
             )}
@@ -128,7 +128,7 @@ export function ChainBuilder({
 
         {available.length > 0 && (
           <div>
-            <h3 className="mb-2 text-subheadline text-label-secondary">Add a habit</h3>
+            <h3 className="font-data mb-2.5 text-[10px] text-label-tertiary">Add a habit</h3>
             <div className="flex flex-wrap gap-2">
               {available.map((h) => (
                 <Chip key={h.id} selected={false} onSelect={() => setSelected([...selected, h.id])}>

@@ -70,7 +70,7 @@ export default function StatsPage() {
             onAction={() => router.push('/habits')}
           />
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] lg:items-start">
+          <div className="flex flex-col gap-6">
             {/* --- Chart column (two-thirds on desktop, ui-spec.md §11) --- */}
             <div>
               <section className="mb-5">

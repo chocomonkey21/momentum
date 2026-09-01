@@ -128,7 +128,7 @@ export function LogHabitSheet({
         {/* Mood — 5-point scale (data-model.md §3). Still available on a skip:
             "skipped, felt tired, at home" is a meaningful data point. */}
         <fieldset>
-          <legend className="mb-2 text-subheadline text-label-secondary">How did it feel?</legend>
+          <legend className="font-data mb-2.5 text-[10px] text-label-tertiary">How did it feel?</legend>
           <div className="flex flex-wrap gap-2">
             {([1, 2, 3, 4, 5] as MoodTag[]).map((m) => {
               const selected = mood === m;
@@ -151,10 +151,10 @@ export function LogHabitSheet({
                 >
                   <span
                     aria-hidden
-                    className={cn('size-5 rounded-full transition-transform', selected && 'scale-125')}
+                    className={cn('size-6 rounded-[8px] transition-transform', selected && 'scale-110')}
                     style={{ backgroundColor: MOOD_COLORS[m] }}
                   />
-                  <span className="text-caption1 text-label-secondary">{MOOD_LABELS[m]}</span>
+                  <span className="font-data text-[9px] text-label-tertiary">{MOOD_LABELS[m]}</span>
                 </motion.button>
               );
             })}
@@ -162,7 +162,7 @@ export function LogHabitSheet({
         </fieldset>
 
         <fieldset>
-          <legend className="mb-2 text-subheadline text-label-secondary">Where were you?</legend>
+          <legend className="font-data mb-2.5 text-[10px] text-label-tertiary">Where were you?</legend>
           <div className="flex flex-wrap gap-2">
             {CONTEXTS.map((c) => (
               <Chip
@@ -178,8 +178,8 @@ export function LogHabitSheet({
         </fieldset>
 
         <div>
-          <label htmlFor="log-notes" className="mb-2 block text-subheadline text-label-secondary">
-            Notes <span className="text-label-tertiary">(optional)</span>
+          <label htmlFor="log-notes" className="font-data mb-2 block text-[10px] text-label-tertiary">
+            Notes (optional)
           </label>
           <textarea
             id="log-notes"
@@ -189,7 +189,7 @@ export function LogHabitSheet({
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Anything worth remembering about today?"
             className={cn(
-              'w-full resize-none rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3',
+              'w-full resize-none rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-3.5',
               'text-body text-label-primary placeholder:text-label-tertiary',
               'border border-transparent transition-colors focus:border-tint',
             )}
@@ -246,8 +246,8 @@ function BigToggle({
       whileTap={disabled || reduce ? undefined : { scale: 0.97 }}
       transition={reduce ? reducedFade : spring.default}
       className={cn(
-        'flex min-h-[72px] flex-col items-center justify-center gap-2 rounded-[var(--radius-card)]',
-        'text-headline font-semibold transition-colors',
+        'flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[var(--radius-card)]',
+        'font-display text-[17px] transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-40',
         selected && tone === 'positive' && 'bg-positive text-black',
         selected && tone === 'neutral' && 'bg-bg-tertiary text-label-primary',

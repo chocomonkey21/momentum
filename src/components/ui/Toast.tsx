@@ -17,7 +17,7 @@ export function ToastHost() {
     <div
       aria-live="polite"
       aria-atomic="true"
-      className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex justify-center px-4 pt-4"
+      className="pointer-events-none fixed left-1/2 top-0 z-[60] flex w-full max-w-[440px] -translate-x-1/2 justify-center px-4 pt-4"
     >
       <AnimatePresence>
         {toast && (

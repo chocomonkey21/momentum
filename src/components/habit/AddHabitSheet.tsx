@@ -130,7 +130,7 @@ export function AddHabitSheet({
     >
       <div className="flex flex-col gap-6">
         <div>
-          <label htmlFor="habit-name" className="mb-2 block text-subheadline text-label-secondary">
+          <label htmlFor="habit-name" className="font-data mb-2 block text-[10px] text-label-tertiary">
             Habit name
           </label>
           <input
@@ -155,7 +155,7 @@ export function AddHabitSheet({
             aria-invalid={Boolean(error)}
             aria-describedby={error ? 'habit-name-error' : undefined}
             className={cn(
-              'w-full rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3',
+              'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-3.5',
               'text-body text-label-primary placeholder:text-label-tertiary',
               'border transition-colors duration-150',
               error ? 'border-destructive' : 'border-transparent focus:border-tint',
@@ -244,7 +244,7 @@ export function AddHabitSheet({
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
                     className={cn(
-                      'w-full rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3',
+                      'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-3.5',
                       'text-body text-label-primary [color-scheme:dark]',
                       'border border-transparent focus:border-tint',
                     )}
@@ -266,7 +266,7 @@ export function AddHabitSheet({
 function Fieldset({ legend, children }: { legend: string; children: React.ReactNode }) {
   return (
     <fieldset>
-      <legend className="mb-2 text-subheadline text-label-secondary">{legend}</legend>
+      <legend className="font-data mb-2.5 text-[10px] text-label-tertiary">{legend}</legend>
       <div className="flex flex-wrap gap-2">{children}</div>
     </fieldset>
   );

@@ -35,7 +35,7 @@ export function EmptyState({
       {/* Zero is neutral, not an error — never destructive red here
           (design-system.md §1.2, CLAUDE.md §4). */}
       <Icon size={32} strokeWidth={2} className="text-label-secondary" aria-hidden />
-      <p className="max-w-xs text-body text-label-secondary">{message}</p>
+      <p className="max-w-[28ch] text-body text-label-secondary">{message}</p>
       {actionLabel && onAction && (
         <Button onClick={onAction} className="mt-1">
           {actionLabel}

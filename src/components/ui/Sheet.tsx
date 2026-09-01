@@ -52,21 +52,19 @@ export function Sheet({
                 exit={reduce ? { opacity: 0 } : { y: '100%' }}
                 transition={reduce ? reducedFade : spring.bouncy}
                 className={cn(
-                  'fixed inset-x-0 bottom-0 z-50 max-h-[90vh] overflow-y-auto',
-                  'rounded-t-[var(--radius-sheet)] border-t border-white/10 bg-bg-primary',
-                  'px-5 pb-8 pt-4',
-                  // Tablet/desktop: centre it rather than gluing a phone sheet to
-                  // the bottom of a 1440px window.
-                  'sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[min(560px,92vw)]',
-                  'sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-sheet)] sm:border',
+                  // Always a bottom sheet: the app is one phone-width column at
+                  // every viewport, so there is no wide window to centre into.
+                  'fixed bottom-0 left-1/2 z-50 max-h-[88vh] w-full max-w-[440px] -translate-x-1/2',
+                  'overflow-y-auto rounded-t-[var(--radius-sheet)] border-t border-white/10',
+                  'bg-bg-elevated px-5 pb-8 pt-4',
                 )}
               >
-                <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray4 sm:hidden" aria-hidden />
+                <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink5" aria-hidden />
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
-                    <Dialog.Title className="text-title2 font-bold">{title}</Dialog.Title>
+                    <Dialog.Title className="font-display text-title2">{title}</Dialog.Title>
                     {description && (
-                      <Dialog.Description className="mt-1 text-subheadline text-label-secondary">
+                      <Dialog.Description className="mt-1.5 text-subheadline text-label-secondary">
                         {description}
                       </Dialog.Description>
                     )}
@@ -112,11 +110,11 @@ export function ConfirmDialog({
         <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xl" />
         <AlertDialog.Content
           className={cn(
-            'fixed left-1/2 top-1/2 z-50 w-[min(420px,92vw)] -translate-x-1/2 -translate-y-1/2',
-            'rounded-[var(--radius-sheet)] border border-white/10 bg-bg-secondary p-6',
+            'fixed left-1/2 top-1/2 z-50 w-[min(380px,88vw)] -translate-x-1/2 -translate-y-1/2',
+            'rounded-[var(--radius-sheet)] border border-white/10 bg-bg-elevated p-6',
           )}
         >
-          <AlertDialog.Title className="text-headline font-semibold">{title}</AlertDialog.Title>
+          <AlertDialog.Title className="font-display text-title2">{title}</AlertDialog.Title>
           <AlertDialog.Description className="mt-2 text-subheadline text-label-secondary">
             {body}
           </AlertDialog.Description>

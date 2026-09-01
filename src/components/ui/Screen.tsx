@@ -10,42 +10,30 @@ import { reducedFade } from '@/theme/theme';
 /**
  * Screen shell.
  *
+ * The app renders as a single phone-width column at EVERY viewport — see
+ * AppFrame in app/layout.tsx. That is a deliberate departure from
+ * design-system.md §3 and CLAUDE.md §10, which specified a responsive build
+ * with a desktop sidebar and multi-column dashboards; the client asked for one
+ * consistent vertical app presentation instead. Screens therefore no longer
+ * carry width variants or breakpoint-specific column layouts.
+ *
  * The bottom padding here is the global fix for the audit bug that recurred on
- * three screens (design-system.md §3, definition-of-done.md): every scrollable
- * screen reserves >= tab-bar height (64px) + 16px, so the last item is never
- * clipped. Applying it once in the shell — rather than per screen — is what
- * stops it recurring a fourth time.
+ * three screens: every scrollable screen reserves >= tab-bar height (64px) +
+ * 16px, so the last item is never clipped. Applying it once in the shell —
+ * rather than per screen — is what stops it recurring a fourth time.
  */
 export function Screen({
   children,
   className,
-  /** Dashboard-style screens (Home, Statistics) get more room than reading widths. */
-  width = 'reading',
 }: {
   children: React.ReactNode;
   className?: string;
+  /** Retained so existing call sites keep compiling; the frame is fixed-width now. */
   width?: 'reading' | 'wide';
 }) {
   return (
-    <main
-      className={cn(
-        // Desktop: clear the fixed 240px sidebar.
-        'min-h-dvh lg:pl-60',
-      )}
-    >
-      <div
-        className={cn(
-          // Content margin: 20px mobile, scaling up on tablet/desktop (§3).
-          'mx-auto px-5 pt-6 sm:px-8 lg:px-12',
-          // pb-20 = 80px = 64px tab bar + 16px, per §3. Desktop has no bottom bar
-          // but keeps breathing room.
-          'pb-20 lg:pb-16',
-          width === 'reading' ? 'max-w-[760px]' : 'max-w-[1180px]',
-          className,
-        )}
-      >
-        {children}
-      </div>
+    <main className="min-h-dvh">
+      <div className={cn('px-5 pb-24 pt-6', className)}>{children}</div>
     </main>
   );
 }

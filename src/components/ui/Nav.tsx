@@ -66,9 +66,11 @@ export function BottomTabBar() {
     <nav
       aria-label="Primary"
       // Translucent + blur so content scrolls visibly underneath (design-system.md §4).
+      // Fixed, but pinned to the phone frame's width rather than the viewport's,
+      // so it stays under the app column on a wide screen.
       className={cn(
-        'fixed inset-x-0 bottom-0 z-40 border-t border-white/10',
-        'bg-black/85 backdrop-blur-xl lg:hidden',
+        'fixed bottom-0 left-1/2 z-40 w-full max-w-[440px] -translate-x-1/2',
+        'border-t border-white/10 bg-black/85 backdrop-blur-xl',
       )}
     >
       <ul className="mx-auto flex max-w-2xl items-stretch justify-around">
@@ -87,54 +89,6 @@ export function BottomTabBar() {
                 )}
               >
                 <Icon size={22} strokeWidth={active ? 2.5 : 2} aria-hidden />
-                <span>{item.label}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
-  );
-}
-
-export function Sidebar() {
-  const pathname = usePathname();
-  if (hideNav(pathname)) return null;
-
-  return (
-    <nav
-      aria-label="Primary"
-      className={cn(
-        'fixed inset-y-0 left-0 z-40 hidden w-60 flex-col gap-1 border-r border-white/10',
-        'bg-black/85 px-4 py-6 backdrop-blur-xl lg:flex',
-      )}
-    >
-      {/* Wordmark — one of the three scoped display-face moments. */}
-      <Link
-        href="/"
-        className="mb-6 px-3 font-display text-2xl tracking-tight text-label-primary"
-        aria-label="Momentum, go to Home"
-      >
-        MOMENTUM
-      </Link>
-      <ul className="flex flex-col gap-1">
-        {NAV_ITEMS.map((item) => {
-          const active = isActive(pathname, item.href);
-          const Icon = item.icon;
-          return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                aria-current={active ? 'page' : undefined}
-                className={cn(
-                  'flex min-h-[44px] items-center gap-3 rounded-[var(--radius-chip)] px-3',
-                  'text-subheadline transition-colors',
-                  active
-                    ? 'bg-tint/15 font-semibold text-tint'
-                    : 'text-label-secondary hover:bg-bg-secondary hover:text-tint',
-                )}
-              >
-                <Icon size={20} strokeWidth={active ? 2.5 : 2} aria-hidden />
                 <span>{item.label}</span>
               </Link>
             </li>

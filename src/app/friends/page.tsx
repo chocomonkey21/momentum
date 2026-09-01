@@ -253,7 +253,7 @@ export default function FriendsPage() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="priya"
               className={cn(
-                'w-full rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3',
+                'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-3.5',
                 'text-body text-label-primary placeholder:text-label-tertiary',
                 'border border-transparent transition-colors focus:border-tint',
               )}

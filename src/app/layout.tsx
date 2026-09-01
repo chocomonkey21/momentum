@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Archivo, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { AppProvider } from '@/context/AppContext';
-import { BottomTabBar, Sidebar } from '@/components/ui/Nav';
+import { BottomTabBar } from '@/components/ui/Nav';
 import { ToastHost } from '@/components/ui/Toast';
 
 /**
@@ -67,12 +67,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={`${displayFace.variable} ${uiFace.variable} ${dataFace.variable}`}
     >
-      <body className="bg-bg-primary text-label-primary antialiased">
+      <body className="bg-ink1 text-label-primary antialiased">
         <AppProvider>
-          <Sidebar />
-          {children}
-          <BottomTabBar />
-          <ToastHost />
+          {/*
+            One phone-width column at every viewport. The client asked for a
+            consistent vertical app presentation rather than the responsive
+            desktop layout design-system.md §3 originally specified, so there is
+            no sidebar and no multi-column breakpoint — a wide screen shows the
+            same app, centred, with the surrounding page reading as inert
+            backdrop rather than empty dead space.
+          */}
+          <div className="relative mx-auto min-h-dvh w-full max-w-[440px] bg-bg-primary shadow-[0_0_80px_rgba(0,0,0,0.9)] sm:border-x sm:border-white/[0.06]">
+            {children}
+            <BottomTabBar />
+            <ToastHost />
+          </div>
         </AppProvider>
       </body>
     </html>
