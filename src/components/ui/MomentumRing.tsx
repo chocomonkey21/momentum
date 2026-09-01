@@ -22,6 +22,12 @@ interface MomentumRingProps {
   fillColor?: string;
   /** Suppresses the momentum-threshold celebration (e.g. for the focus timer). */
   celebrate?: boolean;
+  /**
+   * Set false when the caller renders its own centre content (the Pomodoro
+   * timer draws its countdown digits there) — otherwise the ring's own value
+   * renders underneath and the two overlap.
+   */
+  showValue?: boolean;
 }
 
 /**
@@ -43,6 +49,7 @@ export function MomentumRing({
   className,
   fillColor,
   celebrate = true,
+  showValue = true,
 }: MomentumRingProps) {
   const reduce = useReducedMotion();
   const clamped = Math.max(0, Math.min(100, value));
@@ -105,6 +112,7 @@ export function MomentumRing({
         />
       </svg>
 
+      {showValue && (
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {loading ? (
           <span className="skeleton h-9 w-16 rounded-md" aria-hidden />
@@ -124,6 +132,7 @@ export function MomentumRing({
           </span>
         )}
       </div>
+      )}
     </motion.div>
   );
 }

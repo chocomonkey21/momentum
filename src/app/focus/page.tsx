@@ -128,6 +128,7 @@ export default function FocusPage() {
               strokeWidth={16}
               hero={false}
               celebrate={false}
+              showValue={false}
               fillColor={justCompleted ? semantic.positive : semantic.tint}
               label={linkedHabit ? linkedHabit.name : undefined}
             />

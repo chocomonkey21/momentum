@@ -7,11 +7,24 @@ import { CHART_COLORS, type ChartColor } from '@/theme/theme';
  * User
  * ------------------------------------------------------------------ */
 
+/**
+ * Same in-flight guard as the seeder, for the same reason: read-then-write is
+ * not atomic, so two concurrent callers would each find no user and each create
+ * one, breaking the "exactly one local user" invariant in data-model.md §0.
+ */
+let ensureUserInFlight: Promise<number> | null = null;
+
 /** data-model.md §0 — Phase 1 seeds exactly one implicit local user. */
-export async function ensureUser(name = 'You'): Promise<number> {
-  const existing = await db.users.toCollection().first();
-  if (existing?.id) return existing.id;
-  return db.users.add({ name, username: null, createdAt: new Date().toISOString() });
+export function ensureUser(name = 'You'): Promise<number> {
+  if (ensureUserInFlight) return ensureUserInFlight;
+  ensureUserInFlight = (async () => {
+    const existing = await db.users.orderBy('id').first();
+    if (existing?.id) return existing.id;
+    return db.users.add({ name, username: null, createdAt: new Date().toISOString() });
+  })().finally(() => {
+    ensureUserInFlight = null;
+  });
+  return ensureUserInFlight;
 }
 
 export async function getUser() {

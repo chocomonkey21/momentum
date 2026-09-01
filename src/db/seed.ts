@@ -298,20 +298,40 @@ function setSeedSuppressed(value: boolean) {
   }
 }
 
-/** Idempotent: only seeds when the database is genuinely empty. */
-export async function seedIfEmpty(): Promise<boolean> {
-  if (seedSuppressed()) return false;
-  const habitCount = await db.habits.count();
-  if (habitCount > 0) return false;
+/**
+ * In-flight guard.
+ *
+ * The "is it empty?" check and the writes that follow are not atomic, so two
+ * overlapping callers both see an empty database and both seed it — which
+ * produced a duplicate user and duplicate challenges. React's Strict Mode
+ * double-invokes effects in development, so this fires on literally every dev
+ * boot; two tabs opening at once would do the same in production. Sharing one
+ * promise makes concurrent callers await the same seed instead of racing it.
+ */
+let seedInFlight: Promise<boolean> | null = null;
 
-  const userId = await ensureUser('Shreyas');
-  await seedHabitsAndLogs(userId);
-  const habits = await getActiveHabits(userId);
-  await seedChains(userId, habits);
-  await seedPomodoro(userId, habits);
-  await seedFriends(userId);
-  await db.settings.add({ notificationsEnabled: 0, reminderTime: '08:00' });
-  return true;
+/** Idempotent: only seeds when the database is genuinely empty. */
+export function seedIfEmpty(): Promise<boolean> {
+  if (seedInFlight) return seedInFlight;
+  seedInFlight = (async () => {
+    if (seedSuppressed()) return false;
+    const habitCount = await db.habits.count();
+    if (habitCount > 0) return false;
+
+    const userId = await ensureUser('Shreyas');
+    await seedHabitsAndLogs(userId);
+    const habits = await getActiveHabits(userId);
+    await seedChains(userId, habits);
+    await seedPomodoro(userId, habits);
+    await seedFriends(userId);
+    if ((await db.settings.count()) === 0) {
+      await db.settings.add({ notificationsEnabled: 0, reminderTime: '08:00' });
+    }
+    return true;
+  })().finally(() => {
+    seedInFlight = null;
+  });
+  return seedInFlight;
 }
 
 /** Wipe and reseed — exposed on Settings so a demo can be reset in one tap. */
