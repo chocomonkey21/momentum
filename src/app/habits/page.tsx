@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, Sparkles } from 'lucide-react';
 import { useApp, type HabitView } from '@/context/AppContext';
 import { Screen, ScreenHeader, PageFade } from '@/components/ui/Screen';
@@ -10,11 +10,18 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { EmptyState, ErrorState, SkeletonCardList } from '@/components/ui/States';
 import { HabitCard } from '@/components/habit/HabitCard';
 import { AddHabitSheet } from '@/components/habit/AddHabitSheet';
+import { ChainsPanel } from '@/components/habit/ChainsPanel';
 import { ConfirmDialog } from '@/components/ui/Sheet';
 import { completionRate } from '@/lib/streak';
-import { todayKey, dayKeyRange, toDayKey } from '@/lib/dates';
+import { dayKeyRange, toDayKey } from '@/lib/dates';
 
+type View = 'habits' | 'chains';
 type Range = 'today' | 'week' | 'year';
+
+const VIEWS: { value: View; label: string }[] = [
+  { value: 'habits', label: 'Habits' },
+  { value: 'chains', label: 'Chains' },
+];
 
 const RANGES: { value: Range; label: string }[] = [
   { value: 'today', label: 'Today' },
@@ -23,17 +30,34 @@ const RANGES: { value: Range; label: string }[] = [
 ];
 
 /**
- * Habits List (ui-spec.md §5) — the full roster, not filtered to today.
+ * Habits (ui-spec.md §5) with Chains (§9) merged in as a second view rather
+ * than a separate nav destination.
  *
- * The segmented control changes the STAT shown on each card, not which habits
- * are listed (§5). Bottom padding to clear the tab bar comes from <Screen>.
+ * Chains are a grouping OF habits, so they belong in the habits section — and
+ * folding them in frees the tab-bar slot that Friends now occupies. Both views
+ * keep their full behaviour; only the hosting changed. `/chains` still resolves
+ * (it redirects here with this view preselected) so older links don't dead-end.
  */
 export default function HabitsPage() {
+  return (
+    // useSearchParams needs a Suspense boundary in the App Router.
+    <Suspense fallback={<Screen><SkeletonCardList rows={4} /></Screen>}>
+      <HabitsScreen />
+    </Suspense>
+  );
+}
+
+function HabitsScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { status, errorMessage, retry, habits, setCompletion, addHabit, removeHabit } = useApp();
 
+  const [view, setView] = useState<View>(
+    searchParams.get('view') === 'chains' ? 'chains' : 'habits',
+  );
   const [range, setRange] = useState<Range>('today');
   const [addOpen, setAddOpen] = useState(false);
+  const [newChainSignal, setNewChainSignal] = useState(0);
   const [pendingDelete, setPendingDelete] = useState<HabitView | null>(null);
 
   const windowKeys = useMemo(() => {
@@ -57,9 +81,14 @@ export default function HabitsPage() {
     <Screen>
       <PageFade>
         <ScreenHeader
-          title="Your Habits"
+          title={view === 'habits' ? 'Your Habits' : 'Habit Chains'}
           action={
-            <IconButton label="Add a habit" onClick={() => setAddOpen(true)}>
+            <IconButton
+              label={view === 'habits' ? 'Add a habit' : 'Create a new chain'}
+              onClick={() =>
+                view === 'habits' ? setAddOpen(true) : setNewChainSignal((n) => n + 1)
+              }
+            >
               <Plus size={24} aria-hidden />
             </IconButton>
           }
@@ -67,42 +96,60 @@ export default function HabitsPage() {
 
         <div className="mb-5">
           <SegmentedControl
-            options={RANGES}
-            value={range}
-            onChange={setRange}
-            ariaLabel="Stat time range"
+            options={VIEWS}
+            value={view}
+            onChange={setView}
+            ariaLabel="Habits or chains"
           />
         </div>
 
         {status === 'error' ? (
           <ErrorState message={errorMessage ?? 'Something went wrong.'} onRetry={retry} />
-        ) : status === 'loading' ? (
-          <SkeletonCardList rows={4} />
-        ) : habits.length === 0 ? (
-          <EmptyState
-            icon={Sparkles}
-            message="No habits yet. Momentum starts with one — it doesn't have to be a big one."
-            actionLabel="Add your first habit"
-            onAction={() => setAddOpen(true)}
+        ) : view === 'chains' ? (
+          <ChainsPanel
+            openBuilderSignal={newChainSignal}
+            onBuilderHandled={() => setNewChainSignal((n) => n)}
           />
         ) : (
-          <ul className="flex flex-col gap-3">
-            {habits.map((habit) => {
-              const stat = statFor(habit);
-              return (
-                <li key={habit.id}>
-                  <HabitCard
-                    habit={habit}
-                    onToggle={setCompletion}
-                    onOpen={(id) => router.push(`/habits/${id}`)}
-                    onDelete={() => setPendingDelete(habit)}
-                    statLabel={stat?.label}
-                    statValue={stat?.value}
-                  />
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            <div className="mb-5">
+              <SegmentedControl
+                options={RANGES}
+                value={range}
+                onChange={setRange}
+                ariaLabel="Stat time range"
+              />
+            </div>
+
+            {status === 'loading' ? (
+              <SkeletonCardList rows={4} />
+            ) : habits.length === 0 ? (
+              <EmptyState
+                icon={Sparkles}
+                message="No habits yet. Momentum starts with one — it doesn't have to be a big one."
+                actionLabel="Add your first habit"
+                onAction={() => setAddOpen(true)}
+              />
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {habits.map((habit) => {
+                  const stat = statFor(habit);
+                  return (
+                    <li key={habit.id}>
+                      <HabitCard
+                        habit={habit}
+                        onToggle={setCompletion}
+                        onOpen={(id) => router.push(`/habits/${id}`)}
+                        onDelete={() => setPendingDelete(habit)}
+                        statLabel={stat?.label}
+                        statValue={stat?.value}
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </>
         )}
       </PageFade>
 
