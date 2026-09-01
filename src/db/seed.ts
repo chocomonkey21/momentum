@@ -5,7 +5,7 @@ import { toDayKey, todayKey } from '@/lib/dates';
 /**
  * seed.ts — demo data.
  *
- * Populates a realistic ~4 weeks of history so every screen (Home, Habit Detail,
+ * Populates a realistic full year of history so every screen (Home, Habit Detail,
  * Statistics, Weekly Recap, Chains, Focus, Friends) renders with live-looking
  * data rather than an accidental empty state. Runs once, only when the database
  * is completely empty; `resetAndReseed()` is wired to Settings for demo reruns.
@@ -15,7 +15,31 @@ import { toDayKey, todayKey } from '@/lib/dates';
  * acceptable stand-in for the demo"). There is no Supabase, no auth, no sync.
  */
 
-const DAYS_OF_HISTORY = 26;
+/**
+ * A full year, so the Year view's GitHub-style contribution grids are actually
+ * full rather than four weeks of colour floating in a year of empty cells.
+ */
+const DAYS_OF_HISTORY = 364;
+
+/**
+ * Slow seasonal swing applied on top of each habit's base rate.
+ *
+ * Real habit histories have good months and bad months; a flat probability
+ * produces an evenly-speckled grid that looks synthetic. A sine wave over the
+ * year gives each habit visible dense and sparse bands — which is the entire
+ * point of looking at a year at a glance.
+ *
+ * It also keeps momentum interesting: at the equilibrium completion rate
+ * (GAIN 8 / DECAY 12 balance at p = 0.6) the score is a driftless walk, so the
+ * seasonal swing is what pushes it up and down the 0–100 range over time
+ * instead of pinning it to a boundary.
+ */
+const SEASON_AMPLITUDE = 0.2;
+
+function seasonalRate(base: number, dayIndex: number, phase: number): number {
+  const swing = SEASON_AMPLITUDE * Math.sin((2 * Math.PI * dayIndex) / 365 + phase);
+  return Math.min(0.95, Math.max(0.12, base + swing));
+}
 
 /** Small deterministic PRNG so the demo looks identical on every machine. */
 function mulberry32(seed: number) {
@@ -44,10 +68,22 @@ interface SeedHabit {
   /** Base probability a given day was completed — drives momentum variety. */
   rate: number;
   contexts: ContextTag[];
-  /** Days-ago values that are forced to a miss, to set up specific demo states. */
-  forcedMisses?: number[];
-  forcedHits?: number[];
+  /**
+   * The most recent days, oldest-to-newest, as 1 = completed / 0 = missed.
+   *
+   * Momentum is dominated by the last dozen days, so over a year of random
+   * history the final score reliably pins to 0 or 100 and every habit ends up
+   * looking identical. To get a designed spread instead, the seeder saturates
+   * each habit to 100 with a short run of forced completions and then replays
+   * this exact tail — which makes the ending momentum deterministic and lets
+   * each habit land in a different band (and lets Morning Run carry the
+   * miss streak that triggers the adaptive-difficulty suggestion).
+   */
+  tail: (0 | 1)[];
 }
+
+/** Forced completions before the tail — enough to pin momentum at MAX. */
+const SATURATION_RUN = 13;
 
 const SEED_HABITS: SeedHabit[] = [
   {
@@ -59,9 +95,10 @@ const SEED_HABITS: SeedHabit[] = [
     frequency: 'daily',
     difficulty: 3,
     timeConstraint: '09:00',
-    rate: 0.66,
+    rate: 0.62,
     contexts: ['other', 'gym'],
-    forcedMisses: [1, 2, 3, 4],
+    // Ends on a five-day miss run -> momentum 40, missStreak 5.
+    tail: [1, 0, 0, 0, 0, 0],
   },
   {
     name: 'Read 20 Pages',
@@ -69,9 +106,10 @@ const SEED_HABITS: SeedHabit[] = [
     frequency: 'daily',
     difficulty: 2,
     timeConstraint: null,
-    rate: 0.66,
+    rate: 0.62,
     contexts: ['home', 'work'],
-    forcedHits: [1, 2, 5],
+    // -> momentum 80, the strongest of the four.
+    tail: [0, 0, 0, 1, 1],
   },
   {
     name: 'Meditate',
@@ -79,10 +117,10 @@ const SEED_HABITS: SeedHabit[] = [
     frequency: 'daily',
     difficulty: 1,
     timeConstraint: null,
-    rate: 0.68,
+    rate: 0.64,
     contexts: ['home'],
-    forcedHits: [1, 2, 3, 4],
-    forcedMisses: [6, 7, 8],
+    // -> momentum 56.
+    tail: [0, 0, 0, 0, 0, 1, 1],
   },
   {
     name: 'Journal',
@@ -90,10 +128,10 @@ const SEED_HABITS: SeedHabit[] = [
     frequency: 'daily',
     difficulty: 2,
     timeConstraint: null,
-    rate: 0.6,
+    rate: 0.58,
     contexts: ['home', 'work'],
-    forcedHits: [1, 2, 4, 5, 8],
-    forcedMisses: [3],
+    // -> momentum 32, the one that is visibly slipping.
+    tail: [0, 0, 0, 0, 0, 0, 1, 0, 1],
   },
 ];
 
@@ -138,15 +176,27 @@ async function seedHabitsAndLogs(userId: number) {
     // demo has something live to tap (interaction-spec.md §3).
     for (let ago = DAYS_OF_HISTORY; ago >= 1; ago--) {
       const date = dayKeyAgo(ago);
-      let completed = rand() < spec.rate;
-      if (spec.forcedMisses?.includes(ago)) completed = false;
-      if (spec.forcedHits?.includes(ago)) completed = true;
+      const dayIndex = DAYS_OF_HISTORY - ago;
+      let completed = rand() < seasonalRate(spec.rate, dayIndex, i * 1.7);
+
+      // Deterministic ending: saturate, then replay the designed tail.
+      const tailPos = spec.tail.length - ago; // 0-based index into the tail
+      const inTail = tailPos >= 0;
+      const inSaturationRun = !inTail && ago <= spec.tail.length + SATURATION_RUN;
+      if (inTail) completed = spec.tail[tailPos] === 1;
+      else if (inSaturationRun) completed = true;
 
       // Weekends are a little weaker for everything except Meditate — gives the
       // insight engine a genuine weekday/weekend correlation to find.
       const dow = new Date(date + 'T00:00:00').getDay();
-      if ((dow === 0 || dow === 6) && spec.name !== 'Meditate' && rand() < 0.35) {
-        if (!spec.forcedHits?.includes(ago)) completed = false;
+      if (
+        (dow === 0 || dow === 6) &&
+        spec.name !== 'Meditate' &&
+        !inTail &&
+        !inSaturationRun &&
+        rand() < 0.35
+      ) {
+        completed = false;
       }
 
       const contextPool = spec.contexts;

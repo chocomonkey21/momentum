@@ -100,7 +100,7 @@ export default function OnboardingPage() {
               key={i}
               className={cn(
                 'h-2 rounded-full transition-all duration-200',
-                i === step ? 'w-6 bg-tint' : 'w-2 bg-gray4',
+                i === step ? 'w-6 bg-tint' : 'w-2 bg-ink5',
               )}
             />
           ))}
@@ -206,7 +206,7 @@ export default function OnboardingPage() {
                         aria-hidden
                         className={cn(
                           'inline-flex size-5 items-center justify-center rounded-full border-2',
-                          selected ? 'border-black bg-black/10' : 'border-gray3',
+                          selected ? 'border-black bg-black/10' : 'border-ink5',
                         )}
                       >
                         {selected && <Check size={12} strokeWidth={3} />}

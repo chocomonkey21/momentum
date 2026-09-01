@@ -22,12 +22,20 @@ export function SegmentedControl<T extends string>({
   onChange,
   ariaLabel,
   className,
+  variant = 'solid',
 }: {
   options: { value: T; label: string }[];
   value: T;
   onChange: (v: T) => void;
   ariaLabel: string;
   className?: string;
+  /**
+   * 'solid' is the primary white-indicator control. 'ghost' is for a SECOND
+   * control stacked under a solid one — two full-strength white pills in a row
+   * out-shout the coloured content they sit above, so the subordinate one gets
+   * a quieter indicator and smaller type to keep the hierarchy readable.
+   */
+  variant?: 'solid' | 'ghost';
 }) {
   const reduce = useReducedMotion();
   const layoutId = useId();
@@ -37,7 +45,8 @@ export function SegmentedControl<T extends string>({
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        'inline-flex w-full gap-1 rounded-[var(--radius-chip)] bg-bg-secondary p-1',
+        'inline-flex w-full gap-1 rounded-[var(--radius-chip)] p-1',
+        variant === 'solid' ? 'bg-bg-secondary' : 'bg-white/[0.04]',
         className,
       )}
     >
@@ -51,16 +60,25 @@ export function SegmentedControl<T extends string>({
             aria-selected={selected}
             onClick={() => onChange(opt.value)}
             className={cn(
-              'relative min-h-[36px] flex-1 rounded-[8px] px-3 py-2',
-              'text-subheadline font-medium transition-colors',
-              selected ? 'text-black' : 'text-label-primary hover:text-white',
+              'relative flex-1 rounded-[9px] px-3 transition-colors',
+              variant === 'solid'
+                ? 'min-h-[38px] py-2 text-subheadline font-semibold tracking-[-0.01em]'
+                : 'min-h-[32px] py-1.5 text-footnote font-semibold tracking-[0.01em]',
+              selected
+                ? variant === 'solid'
+                  ? 'text-black'
+                  : 'text-label-primary'
+                : 'text-label-secondary hover:text-label-primary',
             )}
           >
             {selected && (
               <motion.span
                 layoutId={layoutId}
                 aria-hidden
-                className="absolute inset-0 rounded-[8px] bg-white"
+                className={cn(
+                  'absolute inset-0 rounded-[9px]',
+                  variant === 'solid' ? 'bg-white' : 'bg-white/12',
+                )}
                 transition={reduce ? reducedFade : spring.default}
               />
             )}

@@ -74,12 +74,13 @@ export default function StatsPage() {
             {/* --- Chart column (two-thirds on desktop, ui-spec.md §11) --- */}
             <div>
               <section className="mb-5">
-                <p className="text-caption1 uppercase tracking-wide text-label-secondary">
-                  Overall momentum
-                </p>
+                <p className="font-data text-[10px] text-label-tertiary">Overall momentum</p>
                 {/* The one hero number on this screen. */}
                 <p
-                  className="font-display-hero text-6xl leading-none"
+                  // `text-[length:...]` is required here: a bare
+                  // `text-[var(--x)]` is ambiguous and Tailwind resolves it as a
+                  // colour, which silently left this at the inherited size.
+                  className="font-display-hero text-[length:var(--text-mega)] leading-[0.85]"
                   style={{
                     color:
                       momentumBand(overall) === 'strong'
@@ -111,7 +112,7 @@ export default function StatsPage() {
             {/* --- Sidebar column: per-habit rows + insight --- */}
             <div className="flex flex-col gap-4">
               <section>
-                <h2 className="mb-3 text-title2 font-bold">By habit</h2>
+                <h2 className="font-display mb-3 text-title2">By habit</h2>
                 <ul className="flex flex-col gap-2">
                   {habits.map((h) => (
                     <li key={h.id}>

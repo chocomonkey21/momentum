@@ -1,29 +1,32 @@
 /**
- * theme.ts — typed token values for anything Tailwind's CSS-first config can't
- * express directly (design-system.md §10): chart series colors passed to
- * Recharts as props, SVG stroke colors, and Framer Motion spring configs.
+ * theme.ts — typed token values for anything consumed from TypeScript
+ * (Recharts props, SVG strokes, Framer Motion configs).
  *
- * Tailwind v4 uses a CSS-first `@theme` block (src/app/globals.css) rather than
- * a tailwind.config.ts — the token VALUES below are mirrored from that block and
- * are the single source of truth for anything consumed from TypeScript.
+ * Mirrors the `@theme` block in src/app/globals.css, which is the source of
+ * truth for the CSS side. Tailwind v4 is CSS-first, so there is no
+ * tailwind.config.ts.
  */
 
 export const palette = {
-  blue: '#0A84FF',
-  green: '#30D158',
-  orange: '#FF9F0A',
-  red: '#FF453A',
-  yellow: '#FFD60A',
-  purple: '#BF5AF2',
-  // See globals.css: documented gap-fill for the "pink" named in §1's curated set.
-  pink: '#FF375F',
-  gray1: '#8E8E93',
-  gray2: '#636366',
-  gray3: '#48484A',
-  gray4: '#3A3A3C',
-  gray5: '#2C2C2E',
-  gray6: '#1C1C1E',
-  black: '#000000',
+  /* Warm data ramp — bottom-to-top order of the stacked momentum chart. */
+  amber: '#FFC400',
+  orange: '#FF7A00',
+  vermillion: '#FF3D00',
+  blue: '#0B6BFF',
+  purple: '#A855F7',
+
+  green: '#34D058',
+  crimson: '#FF2D55',
+
+  ink0: '#000000',
+  ink1: '#0A0A0B',
+  ink2: '#141416',
+  ink3: '#1C1C1F',
+  ink4: '#26262B',
+  ink5: '#34343A',
+  ink6: '#55555F',
+  ink7: '#8B8B96',
+  ink8: '#C4C4CC',
   white: '#FFFFFF',
 } as const;
 
@@ -31,39 +34,89 @@ export const semantic = {
   tint: palette.blue,
   positive: palette.green,
   warning: palette.orange,
-  destructive: palette.red,
-  bgPrimary: palette.black,
-  bgSecondary: palette.gray6,
-  bgTertiary: palette.gray5,
+  destructive: palette.crimson,
+  bgPrimary: palette.ink0,
+  bgSecondary: palette.ink2,
+  bgTertiary: palette.ink4,
+  bgElevated: palette.ink3,
   labelPrimary: palette.white,
-  labelSecondary: palette.gray1,
-  separator: 'rgba(58,58,60,0.5)',
+  labelSecondary: palette.ink7,
+  labelTertiary: palette.ink6,
+  separator: 'rgba(255,255,255,0.08)',
 } as const;
 
 /**
- * Curated data-visualization set (design-system.md §1.2 exception).
- * A habit's chartColor is assigned round-robin from this list at creation and is
- * stable across the Overlapping Momentum Chart, Mood Calendar, and trend rows.
- * Do NOT generate arbitrary per-habit hues.
+ * Curated per-habit data-visualization set.
+ *
+ * Ordered as a warm ramp (amber → orange → vermillion) before the cool accents,
+ * so a typical 3–4 habit account renders the stacked momentum chart as the
+ * yellow-to-red gradient the design reference calls for, while still keeping
+ * enough hue separation for the calendar and contribution grids to stay
+ * readable. Assigned round-robin at creation and stable across every screen.
  */
-export const CHART_COLORS = ['blue', 'green', 'orange', 'purple', 'pink'] as const;
+export const CHART_COLORS = ['amber', 'orange', 'vermillion', 'blue', 'purple'] as const;
 export type ChartColor = (typeof CHART_COLORS)[number];
 
+/**
+ * Habit rows persist their `chartColor` by name, so databases created before
+ * the palette change still hold names that no longer exist in CHART_COLORS
+ * ('green', 'pink', 'red'...). Everything that resolves a habit colour goes
+ * through this first, so a pre-existing install degrades to the nearest current
+ * hue instead of rendering `undefined` and losing its colour entirely.
+ */
+const LEGACY_COLOR_ALIASES: Record<string, ChartColor> = {
+  green: 'amber',
+  pink: 'vermillion',
+  red: 'vermillion',
+  yellow: 'amber',
+};
+
+export function normalizeChartColor(c: string): ChartColor {
+  if ((CHART_COLORS as readonly string[]).includes(c)) return c as ChartColor;
+  return LEGACY_COLOR_ALIASES[c] ?? 'blue';
+}
+
 export function chartHex(c: ChartColor): string {
-  return palette[c];
+  return palette[normalizeChartColor(c)];
+}
+
+/** Text colour that stays legible on a filled swatch of the given habit hue. */
+export function onChartHex(c: ChartColor): string {
+  // Amber and orange are light enough to need dark text; the rest take white.
+  const n = normalizeChartColor(c);
+  return n === 'amber' || n === 'orange' ? palette.ink0 : palette.white;
+}
+
+/** rgba() of a habit hue at a given alpha — used for tinted card washes. */
+export function chartAlpha(c: ChartColor, alpha: number): string {
+  const hex = chartHex(c).replace('#', '');
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 /**
- * Mood → color mapping for the Mood Calendar (design-system.md §8).
- * 5-point scale from data-model.md §3, mapped onto the same curated palette.
- * Unlogged days render as gray5.
+ * Five-step intensity ramp for the GitHub-style contribution grid.
+ * Index 0 is an unlogged day; 1–4 climb toward the habit's full hue.
  */
+export function contributionRamp(c: ChartColor): [string, string, string, string, string] {
+  return [
+    palette.ink3,
+    chartAlpha(c, 0.28),
+    chartAlpha(c, 0.5),
+    chartAlpha(c, 0.75),
+    chartHex(c),
+  ];
+}
+
+/** Mood → colour (design-system.md §8), restated on the bolder palette. */
 export const MOOD_COLORS: Record<1 | 2 | 3 | 4 | 5, string> = {
-  1: palette.purple,
-  2: palette.blue,
-  3: palette.gray1,
+  1: palette.crimson,
+  2: palette.vermillion,
+  3: palette.ink6,
   4: palette.orange,
-  5: palette.green,
+  5: palette.amber,
 };
 
 export const MOOD_LABELS: Record<1 | 2 | 3 | 4 | 5, string> = {
@@ -74,7 +127,7 @@ export const MOOD_LABELS: Record<1 | 2 | 3 | 4 | 5, string> = {
   5: 'Great',
 };
 
-export const UNLOGGED_DAY_COLOR = palette.gray5;
+export const UNLOGGED_DAY_COLOR = palette.ink3;
 
 /** Motion — design-system.md §5. Numeric configs, not "close enough". */
 export const spring = {
@@ -84,13 +137,11 @@ export const spring = {
   bouncy: { type: 'spring', damping: 12, stiffness: 180, mass: 1 },
 } as const;
 
-/** Reduced-motion fallback: 150–200ms opacity cross-fade (interaction-spec.md preamble). */
+/** Reduced-motion fallback: 150–200ms opacity cross-fade. */
 export const reducedFade = { duration: 0.175, ease: 'easeOut' } as const;
 
-/** Fixed nav dimensions — used to guarantee scroll padding clears the nav.
- *  design-system.md §3: every scrollable list needs bottom padding >= nav height + 16. */
 export const NAV = {
   tabBarHeight: 64,
-  bottomClearance: 80, // 64 + 16
+  bottomClearance: 80,
   sidebarWidth: 240,
 } as const;

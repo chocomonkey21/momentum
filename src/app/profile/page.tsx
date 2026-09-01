@@ -77,7 +77,7 @@ export default function ProfilePage() {
         <section className="mb-8 flex items-center gap-4">
           <span
             aria-hidden
-            className="inline-flex size-16 shrink-0 items-center justify-center rounded-full text-large-title font-bold text-black"
+            className="inline-flex size-16 shrink-0 items-center justify-center rounded-[22px] font-display text-large-title text-white"
             style={{ backgroundColor: semantic.tint }}
           >
             {userName.trim().charAt(0).toUpperCase() || 'M'}

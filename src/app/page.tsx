@@ -50,8 +50,8 @@ export default function HomePage() {
       <PageFade>
         <header className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <p className="text-subheadline text-label-secondary">{longDate()}</p>
-            <h1 className="mt-1 text-large-title font-bold leading-tight">
+            <p className="font-data text-[10px] text-label-tertiary">{longDate()}</p>
+            <h1 className="font-display mt-1 text-large-title leading-[1.05]">
               {greeting()}, {userName}
             </h1>
           </div>
@@ -93,7 +93,7 @@ export default function HomePage() {
                     <Skeleton className="mx-auto h-5 w-40" />
                   ) : (
                     <>
-                      <p className="text-headline font-semibold">
+                      <p className="font-display text-[19px] leading-tight">
                         {total === 0
                           ? 'Nothing scheduled today'
                           : `${doneCount} of ${total} habits done today`}
@@ -123,7 +123,7 @@ export default function HomePage() {
 
             {/* --- Today's habits --- */}
             <section>
-              <h2 className="mb-3 text-title2 font-bold">Today&rsquo;s Habits</h2>
+              <h2 className="font-display mb-3 text-title2">Today&rsquo;s Habits</h2>
 
               {status === 'loading' ? (
                 <SkeletonCardList rows={3} />

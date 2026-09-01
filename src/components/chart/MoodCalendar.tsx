@@ -16,7 +16,7 @@ import type { HabitLog, MoodTag } from '@/db/schema';
  * done/not-done. This is what makes Context Tagging visible rather than just
  * stored, and it's the direct translation of the "dotyo." reference.
  *
- * Unlogged days render as gray5, per §8.
+ * Unlogged days render as the empty ink shade, per §8.
  */
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -237,6 +237,80 @@ export function StreakDotRow({ logs, days = 21 }: { logs: HabitLog[]; days?: num
       <p className="mt-2 text-footnote text-label-secondary">
         {completed} of the last {days} days
       </p>
+    </div>
+  );
+}
+
+/**
+ * Dense metric footer beneath the calendar, in the register of the "dotyo"
+ * reference: a row of big numerals over tiny mono captions, with the two
+ * qualitative figures picked out in the mood colour they describe.
+ */
+export function MoodStatsFooter({ logs }: { logs: HabitLog[] }) {
+  const stats = useMemo(() => {
+    const logged = logs.length;
+    const done = logs.filter((l) => l.completed === 1).length;
+    const donePct = logged === 0 ? 0 : Math.round((done / logged) * 100);
+
+    const moodCounts = new Map<MoodTag, number>();
+    for (const l of logs) {
+      if (l.moodTag) moodCounts.set(l.moodTag as MoodTag, (moodCounts.get(l.moodTag as MoodTag) ?? 0) + 1);
+    }
+    let topMood: MoodTag | null = null;
+    let topCount = 0;
+    for (const [m, c] of moodCounts) {
+      if (c > topCount) {
+        topMood = m;
+        topCount = c;
+      }
+    }
+
+    // Longest run of consecutive missed days — the "max gap" figure.
+    const ordered = [...logs].sort((a, b) => a.date.localeCompare(b.date));
+    let gap = 0;
+    let maxGap = 0;
+    for (const l of ordered) {
+      if (l.completed === 1) gap = 0;
+      else {
+        gap += 1;
+        if (gap > maxGap) maxGap = gap;
+      }
+    }
+
+    const tags = new Set(logs.map((l) => l.contextTag).filter(Boolean)).size;
+    const notes = logs.filter((l) => l.notes).length;
+
+    return { logged, donePct, maxGap, topMood, tags, notes };
+  }, [logs]);
+
+  return (
+    <div className="mt-6 border-t border-white/5 pt-5">
+      <dl className="grid grid-cols-3 gap-y-5 sm:grid-cols-6">
+        <Metric label="Logged" value={String(stats.logged)} />
+        <Metric label="Done %" value={`${stats.donePct}%`} />
+        <Metric label="Max gap" value={String(stats.maxGap)} />
+        <Metric
+          label="Top mood"
+          value={stats.topMood ? MOOD_LABELS[stats.topMood] : '—'}
+          color={stats.topMood ? MOOD_COLORS[stats.topMood] : undefined}
+        />
+        <Metric label="Tags" value={String(stats.tags)} />
+        <Metric label="Notes" value={String(stats.notes)} />
+      </dl>
+    </div>
+  );
+}
+
+function Metric({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div className="text-center">
+      <dd
+        className="font-display text-[22px] leading-none tnum"
+        style={color ? { color } : undefined}
+      >
+        {value}
+      </dd>
+      <dt className="font-data mt-1.5 text-[9px] text-label-tertiary">{label}</dt>
     </div>
   );
 }

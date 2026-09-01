@@ -156,7 +156,7 @@ export function AddHabitSheet({
             aria-describedby={error ? 'habit-name-error' : undefined}
             className={cn(
               'w-full rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3',
-              'text-body text-label-primary placeholder:text-gray2',
+              'text-body text-label-primary placeholder:text-label-tertiary',
               'border transition-colors duration-150',
               error ? 'border-destructive' : 'border-transparent focus:border-tint',
               shake && 'shake',

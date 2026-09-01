@@ -78,7 +78,7 @@ export function ChainBuilder({
             placeholder="Morning Routine"
             className={cn(
               'w-full rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3',
-              'text-body text-label-primary placeholder:text-gray2',
+              'text-body text-label-primary placeholder:text-label-tertiary',
               'border border-transparent transition-colors focus:border-tint',
             )}
           />
@@ -87,7 +87,7 @@ export function ChainBuilder({
         <div>
           <h3 className="mb-2 text-subheadline text-label-secondary">
             In this chain{' '}
-            <span className="text-gray2">
+            <span className="text-label-tertiary">
               ({selected.length} habit{selected.length === 1 ? '' : 's'})
             </span>
           </h3>

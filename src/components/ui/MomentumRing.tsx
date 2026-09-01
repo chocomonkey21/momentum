@@ -92,7 +92,7 @@ export function MomentumRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={palette.gray5}
+          stroke={palette.ink4}
           strokeWidth={strokeWidth}
         />
         <motion.circle
@@ -120,14 +120,14 @@ export function MomentumRing({
           <span
             className={cn(
               'tabular-nums leading-none',
-              hero ? 'font-display-hero text-5xl' : 'text-title2 font-bold',
+              hero ? 'font-display-hero text-[56px]' : 'font-display text-title2',
             )}
           >
             {Math.round(clamped)}
           </span>
         )}
         {label && (
-          <span className="mt-1 text-[length:var(--text-caption1)] uppercase tracking-wide text-label-secondary">
+          <span className="font-data mt-1.5 text-[10px] text-label-tertiary">
             {label}
           </span>
         )}

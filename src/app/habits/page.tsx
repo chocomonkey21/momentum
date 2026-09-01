@@ -118,6 +118,7 @@ function HabitsScreen() {
                 value={range}
                 onChange={setRange}
                 ariaLabel="Stat time range"
+                variant="ghost"
               />
             </div>
 
@@ -143,6 +144,9 @@ function HabitsScreen() {
                         onDelete={() => setPendingDelete(habit)}
                         statLabel={stat?.label}
                         statValue={stat?.value}
+                        // The year view is the GitHub-activity view.
+                        showGrid={range === 'year'}
+                        gridWeeks={52}
                       />
                     </li>
                   );

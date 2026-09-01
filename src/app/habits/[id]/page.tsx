@@ -9,7 +9,7 @@ import { Button, IconButton } from '@/components/ui/Button';
 import { MomentumRing } from '@/components/ui/MomentumRing';
 import { ErrorState, Skeleton } from '@/components/ui/States';
 import { ConfirmDialog, Sheet } from '@/components/ui/Sheet';
-import { MoodCalendar, StreakDotRow } from '@/components/chart/MoodCalendar';
+import { MoodCalendar, StreakDotRow, MoodStatsFooter } from '@/components/chart/MoodCalendar';
 import { InsightCard, AdaptiveDifficultyBanner } from '@/components/habit/InsightCard';
 import { AddHabitSheet } from '@/components/habit/AddHabitSheet';
 import { LogHabitSheet } from '@/components/habit/LogHabitSheet';
@@ -158,20 +158,21 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
         )}
 
         <section className="mb-8">
-          <h2 className="mb-3 text-title2 font-bold">Last 21 days</h2>
+          <h2 className="font-display mb-3 text-title2">Last 21 days</h2>
           <div className="rounded-[var(--radius-card)] bg-bg-secondary p-5">
             <StreakDotRow logs={habit.logs} />
           </div>
         </section>
 
         <section className="mb-8">
-          <h2 className="mb-3 text-title2 font-bold">History</h2>
+          <h2 className="font-display mb-3 text-title2">History</h2>
           <div className="rounded-[var(--radius-card)] bg-bg-secondary p-5">
             <MoodCalendar
               logs={habit.logs}
               selectedDay={selectedDay}
               onSelectDay={(d) => setSelectedDay(d)}
             />
+            <MoodStatsFooter logs={habit.logs} />
           </div>
         </section>
 

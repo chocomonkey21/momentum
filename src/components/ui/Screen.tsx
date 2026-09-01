@@ -65,14 +65,8 @@ export function ScreenHeader({
   return (
     <header className={cn('mb-6 flex items-start justify-between gap-4', className)}>
       <div className="min-w-0">
-        {eyebrow && (
-          <p className="mb-1 text-caption1 uppercase tracking-wide text-label-secondary">
-            {eyebrow}
-          </p>
-        )}
-        {/* Large Title uses the SYSTEM font — the display face is scoped to the
-            wordmark, hero numbers and onboarding headlines only (§2.2). */}
-        <h1 className="text-large-title font-bold leading-tight">{title}</h1>
+        {eyebrow && <p className="font-data mb-2 text-[10px] text-label-tertiary">{eyebrow}</p>}
+        <h1 className="font-display text-large-title leading-[1.05]">{title}</h1>
       </div>
       {action}
     </header>
@@ -102,7 +96,7 @@ export function PushedHeader({
       >
         <ChevronLeft size={24} aria-hidden />
       </IconButton>
-      <h1 className="min-w-0 flex-1 truncate text-large-title font-bold leading-tight">{title}</h1>
+      <h1 className="font-display min-w-0 flex-1 truncate text-large-title leading-[1.05]">{title}</h1>
       {action}
     </header>
   );

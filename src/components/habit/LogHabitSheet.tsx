@@ -179,7 +179,7 @@ export function LogHabitSheet({
 
         <div>
           <label htmlFor="log-notes" className="mb-2 block text-subheadline text-label-secondary">
-            Notes <span className="text-gray2">(optional)</span>
+            Notes <span className="text-label-tertiary">(optional)</span>
           </label>
           <textarea
             id="log-notes"
@@ -190,7 +190,7 @@ export function LogHabitSheet({
             placeholder="Anything worth remembering about today?"
             className={cn(
               'w-full resize-none rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3',
-              'text-body text-label-primary placeholder:text-gray2',
+              'text-body text-label-primary placeholder:text-label-tertiary',
               'border border-transparent transition-colors focus:border-tint',
             )}
           />

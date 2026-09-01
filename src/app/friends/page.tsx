@@ -16,7 +16,7 @@ import { semantic, palette } from '@/theme/theme';
 
 type Tab = 'friends' | 'challenges';
 
-const AVATAR_COLORS = [palette.blue, palette.green, palette.orange, palette.purple, palette.pink];
+const AVATAR_COLORS = [palette.blue, palette.green, palette.orange, palette.purple, palette.vermillion];
 
 /**
  * Friends & Challenges (PRD.md §7, Phase 2).
@@ -221,7 +221,7 @@ export default function FriendsPage() {
                               className="h-full rounded-full"
                               style={{
                                 width: `${Math.round((p.progress / max) * 100)}%`,
-                                backgroundColor: isYou ? semantic.tint : palette.gray2,
+                                backgroundColor: isYou ? semantic.tint : palette.ink5,
                               }}
                             />
                           </div>
@@ -254,7 +254,7 @@ export default function FriendsPage() {
               placeholder="priya"
               className={cn(
                 'w-full rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3',
-                'text-body text-label-primary placeholder:text-gray2',
+                'text-body text-label-primary placeholder:text-label-tertiary',
                 'border border-transparent transition-colors focus:border-tint',
               )}
             />
@@ -306,7 +306,7 @@ function FriendRow({
     <div className="flex min-h-[44px] items-center gap-3 rounded-[var(--radius-card)] bg-bg-secondary px-4 py-3">
       <span
         aria-hidden
-        className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-headline font-semibold text-black"
+        className="inline-flex size-10 shrink-0 items-center justify-center rounded-[16px] font-display text-headline text-black"
         style={{ backgroundColor: color }}
       >
         {initial}

@@ -16,7 +16,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANTS: Record<Variant, string> = {
   // design-system.md §1.3 — black label on bright blue beats white for contrast.
-  primary: 'bg-tint text-black hover:brightness-110',
+  primary: 'bg-tint text-white hover:brightness-115',
   secondary: 'bg-bg-secondary text-label-primary hover:bg-bg-tertiary',
   outlined: 'bg-transparent text-tint border border-tint/60 hover:bg-tint/10',
   destructive: 'bg-transparent text-destructive hover:bg-destructive/10',
@@ -42,8 +42,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       whileTap={isDisabled ? undefined : reduce ? { opacity: 0.7 } : { scale: 0.97 }}
       transition={reduce ? reducedFade : spring.default}
       className={cn(
-        'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full px-6',
-        'text-[length:var(--text-headline)] font-semibold transition-colors',
+        'inline-flex min-h-[48px] items-center justify-center gap-2 rounded-[var(--radius-block)] px-6',
+        'text-[length:var(--text-headline)] font-semibold tracking-[-0.01em] transition-colors',
         // Disabled is visually distinct, not merely non-functional (CLAUDE.md §14).
         'disabled:cursor-not-allowed disabled:opacity-40',
         VARIANTS[variant],
@@ -80,7 +80,7 @@ export function IconButton({
       transition={reduce ? reducedFade : spring.default}
       // 44x44 minimum hit area — pad the target, don't enlarge the glyph.
       className={cn(
-        'inline-flex size-11 shrink-0 items-center justify-center rounded-full',
+        'inline-flex size-11 shrink-0 items-center justify-center rounded-[14px]',
         'text-label-primary transition-colors hover:bg-bg-tertiary',
         'disabled:cursor-not-allowed disabled:opacity-40',
         className,
