@@ -15,7 +15,7 @@ import { semantic, palette } from '@/theme/theme';
 
 type Tab = 'friends' | 'challenges';
 
-const AVATAR_COLORS = [palette.blue, palette.green, palette.orange, palette.purple, palette.vermillion];
+const AVATAR_COLORS = [palette.amber, palette.blue, palette.orange, palette.cyan, palette.vermillion];
 
 /**
  * Friends & Challenges (PRD.md §7, Phase 2).
@@ -185,16 +185,18 @@ export default function FriendsPage() {
                             >
                               {p.name}
                             </span>
-                            <span className="text-subheadline tabular-nums">{p.progress}</span>
+                            <span className="font-display-hero text-[22px] leading-none">
+                              {p.progress}
+                            </span>
                           </div>
                           {/* Progress bar uses tint for you, neutral grey for
                               others — tint stays meaningful, not decorative. */}
                           <div
-                            className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-bg-tertiary"
+                            className="mt-2 h-2 overflow-hidden rounded-[var(--radius-pill)] bg-bg-tertiary"
                             role="presentation"
                           >
                             <div
-                              className="h-full rounded-full"
+                              className="h-full rounded-[var(--radius-pill)]"
                               style={{
                                 width: `${Math.round((p.progress / max) * 100)}%`,
                                 backgroundColor: isYou ? semantic.tint : palette.ink5,
@@ -271,10 +273,10 @@ function FriendRowItem({
   const color = AVATAR_COLORS[colorIndex % AVATAR_COLORS.length];
   const initial = name.trim().charAt(0).toUpperCase() || '?';
   return (
-    <div className="flex min-h-[44px] items-center gap-3 rounded-[var(--radius-card)] bg-bg-secondary px-4 py-3">
+    <div className="flex min-h-[44px] items-center gap-3 rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3.5">
       <span
         aria-hidden
-        className="inline-flex size-10 shrink-0 items-center justify-center rounded-[16px] font-display text-headline text-black"
+        className="font-display inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-block)] text-[17px] text-black"
         style={{ backgroundColor: color }}
       >
         {initial}

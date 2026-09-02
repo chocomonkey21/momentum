@@ -7,6 +7,7 @@ import { ChevronLeft, Check } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
+import { Starburst } from '@/components/ui/Starburst';
 import { cn } from '@/lib/cn';
 import { spring, reducedFade } from '@/theme/theme';
 import { CATEGORIES } from '@/components/habit/AddHabitSheet';
@@ -119,8 +120,9 @@ export default function OnboardingPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={reduce ? reducedFade : spring.default}
-            className="flex flex-1 flex-col items-center justify-center text-center"
+            className="flex flex-1 flex-col justify-center"
           >
+            <Starburst size={56} className="mb-10 text-tint" strokeWidth={2.5} />
             {/* Wordmark — the one screen with its own dedicated face. */}
             <motion.h1
               initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
@@ -135,7 +137,7 @@ export default function OnboardingPage() {
               initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.16, ...(reduce ? reducedFade : spring.default) }}
-              className="mt-4 max-w-xs text-subheadline text-label-secondary"
+              className="mt-4 max-w-[30ch] text-body leading-relaxed text-label-secondary"
             >
               Build better days. Miss one and your progress dips — it doesn&rsquo;t disappear.
             </motion.p>
@@ -153,7 +155,7 @@ export default function OnboardingPage() {
           >
             {/* Onboarding headline — scoped display-face moment #3. */}
             <h1 className="font-display text-4xl leading-tight">WHAT DO YOU WANT TO IMPROVE?</h1>
-            <p className="mt-3 text-subheadline text-label-secondary">
+            <p className="mt-3 max-w-[34ch] text-body leading-relaxed text-label-secondary">
               Pick any that apply, or skip — this only orders the suggestions next.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
@@ -184,7 +186,7 @@ export default function OnboardingPage() {
             className="flex-1"
           >
             <h1 className="font-display text-4xl leading-tight">PICK YOUR FIRST HABITS</h1>
-            <p className="mt-3 text-subheadline text-label-secondary">
+            <p className="mt-3 max-w-[34ch] text-body leading-relaxed text-label-secondary">
               Start small. You can add more any time.
             </p>
             <ul className="mt-6 flex flex-col gap-2">
@@ -249,7 +251,7 @@ export default function OnboardingPage() {
               Start Tracking
             </Button>
             {picked.length === 0 && (
-              <p className="mt-2 text-center text-footnote text-label-secondary">
+              <p className="mt-3 text-footnote text-label-secondary">
                 Pick at least one habit to continue.
               </p>
             )}

@@ -28,8 +28,10 @@ export function ToastHost() {
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -8 }}
             transition={reduce ? reducedFade : { duration: 0.25, ease: 'easeOut' }}
             className={[
-              'pointer-events-auto flex items-center gap-4 rounded-full',
-              'border border-white/10 bg-bg-secondary/95 px-5 py-3 shadow-xl backdrop-blur-xl',
+              // Flat, opaque surface: §4 scopes blur to the nav and sheet
+              // scrims, and a toast needs no shadow to read above the page.
+              'pointer-events-auto flex items-center gap-4 rounded-[var(--radius-pill)]',
+              'border border-white/10 bg-ink4 px-5 py-3',
             ].join(' ')}
           >
             <span className="text-subheadline">{toast.message}</span>

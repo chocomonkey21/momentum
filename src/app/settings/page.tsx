@@ -66,7 +66,7 @@ export default function SettingsPage() {
 
         {/* --- Notifications --- */}
         <section className="mb-8">
-          <h2 className="mb-3 text-title2 font-bold">Notifications</h2>
+          <h2 className="font-display mb-3 text-title2">Notifications</h2>
 
           <label
             className={cn(
@@ -91,7 +91,7 @@ export default function SettingsPage() {
           </label>
 
           {blocked && (
-            <p className="mt-2 flex items-start gap-2 rounded-[var(--radius-chip)] bg-bg-secondary p-4 text-footnote text-label-secondary">
+            <p className="mt-2 flex items-start gap-2 rounded-[var(--radius-block)] bg-bg-secondary p-4 text-footnote text-label-secondary">
               <BellOff size={14} className="mt-0.5 shrink-0" aria-hidden />
               <span>
                 {permission === 'unsupported'
@@ -118,7 +118,7 @@ export default function SettingsPage() {
                 onChange={(e) => {
                   if (settingsId) void updateSettings(settingsId, { reminderTime: e.target.value });
                 }}
-                className="rounded-[var(--radius-chip)] bg-bg-tertiary px-4 py-2 text-body [color-scheme:dark]"
+                className="rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-2 text-body [color-scheme:dark]"
               />
             </div>
           )}
@@ -126,9 +126,9 @@ export default function SettingsPage() {
 
         {/* --- Account --- */}
         <section className="mb-8">
-          <h2 className="mb-3 text-title2 font-bold">Account</h2>
+          <h2 className="font-display mb-3 text-title2">Account</h2>
           <div className="rounded-[var(--radius-card)] bg-bg-secondary px-5 py-4">
-            <label htmlFor="display-name" className="mb-2 block text-subheadline text-label-secondary">
+            <label htmlFor="display-name" className="font-data mb-2 block text-label-tertiary">
               Display name
             </label>
             <div className="flex items-center gap-3">
@@ -150,7 +150,7 @@ export default function SettingsPage() {
                   setTimeout(() => setNameSaved(false), 1800);
                 }}
                 className={cn(
-                  'flex-1 rounded-[var(--radius-chip)] bg-bg-tertiary px-4 py-3',
+                  'flex-1 rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-3',
                   'text-body text-label-primary',
                   'border border-transparent transition-colors focus:border-tint',
                 )}
@@ -188,7 +188,7 @@ export default function SettingsPage() {
 
         {/* --- About --- */}
         <section>
-          <h2 className="mb-3 text-title2 font-bold">About</h2>
+          <h2 className="font-display mb-3 text-title2">About</h2>
           <div className="rounded-[var(--radius-card)] bg-bg-secondary px-5 py-4">
             <dl className="flex items-center justify-between text-subheadline">
               <dt className="text-label-secondary">Version</dt>

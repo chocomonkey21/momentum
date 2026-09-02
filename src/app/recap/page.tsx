@@ -11,14 +11,18 @@ import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States';
 import { verdictFor, recapSentence, bestDayOfWeek, type Verdict } from '@/lib/recap';
 import { momentumSeries } from '@/lib/momentum';
 import { dayKeyRange, toDayKey } from '@/lib/dates';
-import { semantic } from '@/theme/theme';
+import { semantic, palette } from '@/theme/theme';
 import { cn } from '@/lib/cn';
 
-const VERDICT_STYLES: Record<Verdict, { color: string; bg: string }> = {
-  'Strong week': { color: semantic.positive, bg: 'rgba(48,209,88,0.15)' },
-  Steady: { color: semantic.tint, bg: 'rgba(10,132,255,0.15)' },
-  // Slipping is a WARNING, never destructive red — a dip is not an error.
-  Slipping: { color: semantic.warning, bg: 'rgba(255,159,10,0.15)' },
+/**
+ * Verdict badges are solid blocks of flat colour with dark text, not tinted
+ * pills — the same treatment habit cards use, at chip scale.
+ * Slipping is WARNING orange, never destructive red: a dip is not an error.
+ */
+const VERDICT_STYLES: Record<Verdict, { bg: string; fg: string }> = {
+  'Strong week': { bg: semantic.positive, fg: palette.ink0 },
+  Steady: { bg: semantic.tint, fg: palette.white },
+  Slipping: { bg: semantic.warning, fg: palette.ink0 },
 };
 
 /**
@@ -115,30 +119,31 @@ export default function RecapPage() {
                   aria-label={`${habit.name}, ${verdict}, ${completions} of ${outOf} days. Open details.`}
                   className={cn(
                     'w-full rounded-[var(--radius-card)] bg-bg-secondary p-5 text-left',
-                    'transition-[background-color,transform,box-shadow] duration-150',
-                    'hover:-translate-y-0.5 hover:bg-bg-tertiary hover:shadow-lg hover:shadow-black/40',
+                    'transition-colors duration-150 hover:bg-bg-tertiary',
                   )}
                 >
-                  <div className="mb-2 flex items-center gap-3">
-                    <span className="min-w-0 flex-1 truncate text-headline font-semibold">
+                  <div className="mb-4 flex items-center gap-3">
+                    <span className="font-display min-w-0 flex-1 truncate text-[19px]">
                       {habit.name}
                     </span>
                     <span
-                      className="shrink-0 rounded-full px-3 py-1 text-caption1 font-semibold"
+                      className="font-data shrink-0 rounded-[var(--radius-pill)] px-3 py-1.5"
                       style={{
-                        color: VERDICT_STYLES[verdict].color,
+                        color: VERDICT_STYLES[verdict].fg,
                         backgroundColor: VERDICT_STYLES[verdict].bg,
                       }}
                     >
                       {verdict}
                     </span>
-                    <ChevronRight size={16} className="shrink-0 text-label-secondary" aria-hidden />
+                    <ChevronRight size={16} className="shrink-0 text-label-tertiary" aria-hidden />
                   </div>
 
-                  <p className="mb-2 text-footnote text-label-secondary">
-                    {completions} of {outOf} days
-                  </p>
-                  <p className="text-body text-label-primary">{sentence}</p>
+                  {/* Stat pattern — the week's count is the number that matters. */}
+                  <div className="mb-4 flex items-baseline gap-2">
+                    <span className="font-display-hero text-[40px] leading-none">{completions}</span>
+                    <span className="font-data text-label-tertiary">of {outOf} days</span>
+                  </div>
+                  <p className="text-body leading-relaxed text-label-secondary">{sentence}</p>
                 </button>
               </motion.li>
             ))}

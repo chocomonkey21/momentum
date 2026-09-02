@@ -49,8 +49,7 @@ export function PressableCard({
       transition={reduce ? reducedFade : spring.default}
       className={cn(
         'cursor-pointer rounded-[var(--radius-card)] bg-bg-secondary p-5',
-        'transition-[background-color,box-shadow] duration-150',
-        'hover:bg-bg-tertiary hover:shadow-lg hover:shadow-black/40',
+        'transition-colors duration-150 hover:bg-bg-tertiary',
         className,
       )}
       {...(rest as React.ComponentProps<typeof motion.div>)}

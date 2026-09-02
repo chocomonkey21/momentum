@@ -3,6 +3,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
 import { Button } from './Button';
+import { Starburst } from './Starburst';
 import { cn } from '@/lib/cn';
 
 /**
@@ -10,15 +11,26 @@ import { cn } from '@/lib/cn';
  * list-bearing screen shows the same thing rather than reimplementing it.
  */
 
-/** Empty State — lucide icon + one line of body copy + one primary action. */
+/**
+ * Empty State — geometric mark, one line of body copy, one action.
+ *
+ * Copy is left-aligned: a centred paragraph is the fastest way to make a
+ * product look like a template. The mark is the abstract burst rather than a
+ * lucide glyph, because at this size an icon stops being an icon and starts
+ * being an illustration.
+ *
+ * `icon` is still accepted so no call site had to change, but it is no longer
+ * rendered — the burst is the single flourish across every empty state.
+ */
 export function EmptyState({
-  icon: Icon,
+  icon: _icon,
   message,
   actionLabel,
   onAction,
   className,
 }: {
-  icon: LucideIcon;
+  /** @deprecated Retained for call-site compatibility; the burst is used instead. */
+  icon?: LucideIcon;
   message: string;
   actionLabel?: string;
   onAction?: () => void;
@@ -27,20 +39,13 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center gap-4 rounded-[var(--radius-card)]',
-        'bg-bg-secondary px-6 py-12 text-center',
+        'flex flex-col items-start gap-5 rounded-[var(--radius-card)] bg-bg-secondary px-6 py-10',
         className,
       )}
     >
-      {/* Zero is neutral, not an error — never destructive red here
-          (design-system.md §1.2, CLAUDE.md §4). */}
-      <Icon size={32} strokeWidth={2} className="text-label-secondary" aria-hidden />
-      <p className="max-w-[28ch] text-body text-label-secondary">{message}</p>
-      {actionLabel && onAction && (
-        <Button onClick={onAction} className="mt-1">
-          {actionLabel}
-        </Button>
-      )}
+      <Starburst size={40} className="text-ink5" strokeWidth={2} />
+      <p className="max-w-[34ch] text-body leading-relaxed text-label-secondary">{message}</p>
+      {actionLabel && onAction && <Button onClick={onAction}>{actionLabel}</Button>}
     </div>
   );
 }
@@ -59,13 +64,12 @@ export function ErrorState({
     <div
       role="alert"
       className={cn(
-        'flex flex-col items-center justify-center gap-3 rounded-[var(--radius-card)]',
-        'bg-bg-secondary px-6 py-10 text-center',
+        'flex flex-col items-start gap-4 rounded-[var(--radius-card)] bg-bg-secondary px-6 py-8',
         className,
       )}
     >
-      <AlertCircle size={28} className="text-destructive" aria-hidden />
-      <p className="max-w-sm text-body text-label-primary">{message}</p>
+      <AlertCircle size={20} className="text-destructive" aria-hidden />
+      <p className="max-w-[34ch] text-body leading-relaxed text-label-primary">{message}</p>
       {onRetry && (
         <Button variant="secondary" onClick={onRetry}>
           Retry
@@ -77,7 +81,7 @@ export function ErrorState({
 
 /** Skeleton block — shimmer per interaction-spec.md §10. */
 export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden className={cn('skeleton rounded-[var(--radius-chip)]', className)} />;
+  return <div aria-hidden className={cn('skeleton rounded-[var(--radius-block)]', className)} />;
 }
 
 /** Skeleton rows matching the eventual Habit Card shape. */
@@ -89,11 +93,12 @@ export function SkeletonCardList({ rows = 3 }: { rows?: number }) {
           key={i}
           className="flex items-center gap-4 rounded-[var(--radius-card)] bg-bg-secondary p-5"
         >
+          <Skeleton className="size-12 rounded-[var(--radius-block)]" />
           <div className="flex-1 space-y-2">
-            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-2.5 w-16" />
             <Skeleton className="h-4 w-40" />
           </div>
-          <Skeleton className="size-11 rounded-full" />
+          <Skeleton className="h-9 w-12" />
         </div>
       ))}
     </div>

@@ -13,6 +13,7 @@ import { AddHabitSheet } from '@/components/habit/AddHabitSheet';
 import { ConfirmDialog } from '@/components/ui/Sheet';
 import { greeting, longDate } from '@/lib/dates';
 import { chartHex, chartAlpha, palette, semantic } from '@/theme/theme';
+import { cn } from '@/lib/cn';
 import type { HabitView } from '@/context/AppContext';
 
 /**
@@ -73,15 +74,17 @@ export default function HomePage() {
           <div className="flex flex-col gap-3">
             {/* --- Hero: today's completion --- */}
             <section
-              className="rounded-[var(--radius-card)] border p-6 transition-colors"
+              className="rounded-[var(--radius-card)] p-6 transition-colors"
+              // A finished day turns the hero into a solid block of colour —
+              // one flat fill, no gradient, no border trick.
               style={{
-                background: allDone
-                  ? `linear-gradient(160deg, ${chartAlpha('amber', 0.24)} 0%, rgba(255,255,255,0.02) 65%)`
-                  : semantic.bgSecondary,
-                borderColor: allDone ? chartAlpha('amber', 0.4) : 'transparent',
+                backgroundColor: allDone ? palette.amber : semantic.bgSecondary,
+                color: allDone ? palette.ink0 : undefined,
               }}
             >
-              <p className="font-data text-[10px] text-label-tertiary">Today</p>
+              <p className={cn('font-data', allDone ? 'text-black/60' : 'text-label-tertiary')}>
+                Today
+              </p>
 
               {status === 'loading' ? (
                 <Skeleton className="mt-3 h-20 w-40" />
@@ -89,11 +92,16 @@ export default function HomePage() {
                 <>
                   <div className="mt-2 flex items-end gap-2">
                     <span className="font-display-hero text-[64px] leading-[0.82]">{doneCount}</span>
-                    <span className="font-display pb-1.5 text-title2 text-label-secondary">
+                    <span
+                      className={cn(
+                        'font-display pb-1.5 text-title2',
+                        allDone ? 'text-black/50' : 'text-label-secondary',
+                      )}
+                    >
                       / {total}
                     </span>
                   </div>
-                  <p className="mt-2 text-subheadline text-label-secondary">
+                  <p className={cn('mt-3 text-body', allDone ? 'text-black/70' : 'text-label-secondary')}>
                     {total === 0
                       ? 'Nothing scheduled today'
                       : allDone

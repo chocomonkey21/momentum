@@ -93,7 +93,7 @@ export function ChainBuilder({
           </h3>
 
           {selected.length === 0 ? (
-            <p className="rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-6 text-center text-footnote text-label-secondary">
+            <p className="rounded-[var(--radius-block)] bg-bg-secondary px-4 py-5 text-footnote text-label-secondary">
               Add at least one habit below.
             </p>
           ) : (
@@ -184,7 +184,7 @@ function ChainRow({
       // Picked-up chip lifts and casts a shadow — the visual stand-in for the
       // haptic the native build would have used (interaction-spec.md §14).
       whileDrag={reduce ? undefined : { scale: 1.05, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}
-      className="flex items-center gap-2 rounded-[var(--radius-chip)] bg-bg-secondary p-2 pl-3"
+      className="flex items-center gap-2 rounded-[var(--radius-block)] bg-bg-secondary p-2 pl-3"
     >
       <span
         aria-hidden

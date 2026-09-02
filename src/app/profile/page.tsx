@@ -13,7 +13,7 @@ import { totalCompletions, completionRate } from '@/lib/streak';
 import { getPomodoroSessions } from '@/db/queries';
 import type { PomodoroSession } from '@/db/schema';
 import { cn } from '@/lib/cn';
-import { semantic } from '@/theme/theme';
+import { semantic, palette } from '@/theme/theme';
 
 /**
  * Profile (ui-spec.md §13) — identity, lifetime stats, achievements, and the
@@ -77,13 +77,13 @@ export default function ProfilePage() {
         <section className="mb-8 flex items-center gap-4">
           <span
             aria-hidden
-            className="inline-flex size-16 shrink-0 items-center justify-center rounded-[22px] font-display text-large-title text-white"
-            style={{ backgroundColor: semantic.tint }}
+            className="inline-flex size-16 shrink-0 items-center justify-center rounded-[var(--radius-block)] font-display text-large-title"
+            style={{ backgroundColor: palette.amber, color: palette.ink0 }}
           >
             {userName.trim().charAt(0).toUpperCase() || 'M'}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-title2 font-bold">{userName}</p>
+            <p className="font-display truncate text-title2">{userName}</p>
             <p className="text-subheadline text-label-secondary">
               {habits.length} active habit{habits.length === 1 ? '' : 's'}
             </p>
@@ -95,7 +95,7 @@ export default function ProfilePage() {
             <Skeleton className="h-24 w-full rounded-[var(--radius-card)]" />
           ) : (
             <dl className="grid grid-cols-3 gap-3">
-              <StatTile label="Best streak" value={stats.bestStreak} suffix=" days" />
+              <StatTile label="Best streak" value={stats.bestStreak} />
               <StatTile label="Completions" value={stats.completions} />
               <StatTile label="Consistency" value={stats.consistency} suffix="%" />
             </dl>
@@ -104,8 +104,8 @@ export default function ProfilePage() {
 
         <section className="mb-8">
           <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-title2 font-bold">Achievements</h2>
-            <span className="text-footnote text-label-secondary">
+            <h2 className="font-display text-title2">Achievements</h2>
+            <span className="font-data text-label-tertiary">
               {unlockedCount} of {achievements.length}
             </span>
           </div>
@@ -118,24 +118,22 @@ export default function ProfilePage() {
                   onClick={() => setDetail(a)}
                   aria-label={`${a.name}, ${a.unlocked ? 'unlocked' : 'locked'}. ${a.criteria}.`}
                   className={cn(
-                    'flex w-full flex-col items-center gap-2 rounded-[var(--radius-card)]',
+                    'flex w-full flex-col items-center gap-2.5 rounded-[var(--radius-block)]',
                     'bg-bg-secondary px-2 py-4 transition-colors hover:bg-bg-tertiary',
                   )}
                 >
+                  {/* Unlocked badges are a solid block of colour; locked ones
+                      stay neutral and dim (design-system.md §7). */}
                   <span
                     aria-hidden
-                    className={cn(
-                      'inline-flex size-11 items-center justify-center rounded-full',
-                      // Locked = grey and low opacity, explicitly defined
-                      // (design-system.md §7).
-                      a.unlocked ? 'bg-warning/20' : 'bg-bg-tertiary opacity-40',
-                    )}
+                    className="inline-flex size-11 items-center justify-center rounded-[var(--radius-block)]"
+                    style={
+                      a.unlocked
+                        ? { backgroundColor: palette.amber, color: palette.ink0 }
+                        : { backgroundColor: semantic.bgTertiary, color: semantic.labelTertiary }
+                    }
                   >
-                    {a.unlocked ? (
-                      <Award size={22} className="text-warning" />
-                    ) : (
-                      <Lock size={18} className="text-label-secondary" />
-                    )}
+                    {a.unlocked ? <Award size={20} /> : <Lock size={17} />}
                   </span>
                   <span
                     className={cn(
@@ -160,9 +158,9 @@ export default function ProfilePage() {
               'bg-bg-secondary px-5 py-4 text-left transition-colors hover:bg-bg-tertiary',
             )}
           >
-            <SettingsIcon size={20} className="text-label-secondary" aria-hidden />
+            <SettingsIcon size={18} className="text-label-tertiary" aria-hidden />
             <span className="flex-1 text-body">Settings</span>
-            <ChevronRight size={18} className="text-label-secondary" aria-hidden />
+            <ChevronRight size={18} className="text-label-tertiary" aria-hidden />
           </button>
         </section>
       </PageFade>
@@ -227,12 +225,13 @@ function StatTile({
   }, [value, reduce]);
 
   return (
-    <div className="rounded-[var(--radius-card)] bg-bg-secondary px-3 py-4 text-center">
-      <dd className="text-title2 font-bold tabular-nums">
+    // The stat pattern: numeral, then a tiny uppercase label beneath it.
+    <div className="rounded-[var(--radius-block)] bg-bg-secondary px-3 py-5">
+      <dd className="font-display-hero text-[34px] leading-none">
         <motion.span>{shown}</motion.span>
         {suffix}
       </dd>
-      <dt className="mt-1 text-caption1 uppercase tracking-wide text-label-secondary">{label}</dt>
+      <dt className="font-data mt-2 text-label-tertiary">{label}</dt>
     </div>
   );
 }

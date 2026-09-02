@@ -13,18 +13,18 @@ export const palette = {
   orange: '#FF7A00',
   vermillion: '#FF3D00',
   blue: '#0B6BFF',
-  purple: '#A855F7',
+  cyan: '#4FC9F0',
 
   green: '#34D058',
   crimson: '#FF2D55',
 
   ink0: '#000000',
-  ink1: '#0A0A0B',
-  ink2: '#141416',
-  ink3: '#1C1C1F',
-  ink4: '#26262B',
-  ink5: '#34343A',
-  ink6: '#55555F',
+  ink1: '#08080A',
+  ink2: '#121214',
+  ink3: '#1A1A1D',
+  ink4: '#242428',
+  ink5: '#33333A',
+  ink6: '#52525C',
   ink7: '#8B8B96',
   ink8: '#C4C4CC',
   white: '#FFFFFF',
@@ -42,19 +42,21 @@ export const semantic = {
   labelPrimary: palette.white,
   labelSecondary: palette.ink7,
   labelTertiary: palette.ink6,
-  separator: 'rgba(255,255,255,0.08)',
+  separator: 'rgba(255,255,255,0.07)',
 } as const;
 
 /**
  * Curated per-habit data-visualization set.
  *
- * Ordered as a warm ramp (amber → orange → vermillion) before the cool accents,
- * so a typical 3–4 habit account renders the stacked momentum chart as the
- * yellow-to-red gradient the design reference calls for, while still keeping
- * enough hue separation for the calendar and contribution grids to stay
- * readable. Assigned round-robin at creation and stable across every screen.
+ * Ordered as a warm ramp (amber → orange → vermillion) before the cool accents.
+ * Every value is a flat, fully-saturated fill — these are used as whole-card
+ * backgrounds, not as tints behind a neutral card.
+ * A typical 3–4 habit account therefore renders the stacked momentum chart as a
+ * warm yellow-to-red climb, while keeping enough hue separation for the
+ * calendar and contribution grids to stay readable. Assigned round-robin at
+ * creation and stable across every screen.
  */
-export const CHART_COLORS = ['amber', 'orange', 'vermillion', 'blue', 'purple'] as const;
+export const CHART_COLORS = ['amber', 'orange', 'vermillion', 'blue', 'cyan'] as const;
 export type ChartColor = (typeof CHART_COLORS)[number];
 
 /**
@@ -69,6 +71,9 @@ const LEGACY_COLOR_ALIASES: Record<string, ChartColor> = {
   pink: 'vermillion',
   red: 'vermillion',
   yellow: 'amber',
+  // Violet was dropped from the palette in v4 — it is the single most generic
+  // 'AI-generated app' accent, and the brief forbids it outright.
+  purple: 'cyan',
 };
 
 export function normalizeChartColor(c: string): ChartColor {
@@ -80,14 +85,19 @@ export function chartHex(c: ChartColor): string {
   return palette[normalizeChartColor(c)];
 }
 
-/** Text colour that stays legible on a filled swatch of the given habit hue. */
+/** Text colour that stays legible on a solid fill of the given habit hue. */
 export function onChartHex(c: ChartColor): string {
-  // Amber and orange are light enough to need dark text; the rest take white.
   const n = normalizeChartColor(c);
-  return n === 'amber' || n === 'orange' ? palette.ink0 : palette.white;
+  // Light hues take black text; the two dark ones take white.
+  return n === 'amber' || n === 'orange' || n === 'cyan' ? palette.ink0 : palette.white;
 }
 
-/** rgba() of a habit hue at a given alpha — used for tinted card washes. */
+/**
+ * rgba() of a habit hue at a given alpha.
+ *
+ * Only used for the contribution grid's five-step intensity ramp, where each
+ * step is still a flat fill — never for a gradient or a wash behind a card.
+ */
 export function chartAlpha(c: ChartColor, alpha: number): string {
   const hex = chartHex(c).replace('#', '');
   const r = parseInt(hex.slice(0, 2), 16);

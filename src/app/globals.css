@@ -1,30 +1,34 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Momentum — design tokens (v2 visual direction)
-   Bolder, higher-contrast, color-blocked. Dark-only.
+   Momentum — design tokens (v4 visual direction)
+
+   Flat, solid colour only. No gradients anywhere: every fill in
+   this system is a single flat value. Depth comes from the ink
+   ramp and from deliberate contrast, not from shading.
    ============================================================ */
 
 @theme {
   /* --- Primitives -------------------------------------------------- */
-  /* Warm data ramp: the signature of the stacked momentum chart. */
+  /* Warm data ramp, then two cool accents. Fully saturated — these are
+     meant to be used as whole-card fills, not as tints. */
   --color-app-amber: #ffc400;
   --color-app-orange: #ff7a00;
   --color-app-vermillion: #ff3d00;
   --color-app-blue: #0b6bff;
-  --color-app-purple: #a855f7;
+  --color-app-cyan: #4fc9f0;
 
   --color-app-green: #34d058;
   --color-app-crimson: #ff2d55;
 
-  /* Neutral ramp — deeper and higher contrast than Apple's system greys. */
+  /* Neutral ramp. The canvas is near-black; everything else steps up. */
   --color-ink-0: #000000;
-  --color-ink-1: #0a0a0b;
-  --color-ink-2: #141416;
-  --color-ink-3: #1c1c1f;
-  --color-ink-4: #26262b;
-  --color-ink-5: #34343a;
-  --color-ink-6: #55555f;
+  --color-ink-1: #08080a;
+  --color-ink-2: #121214;
+  --color-ink-3: #1a1a1d;
+  --color-ink-4: #242428;
+  --color-ink-5: #33333a;
+  --color-ink-6: #52525c;
   --color-ink-7: #8b8b96;
   --color-ink-8: #c4c4cc;
 
@@ -42,16 +46,22 @@
   --color-label-primary: #ffffff;
   --color-label-secondary: var(--color-ink-7);
   --color-label-tertiary: var(--color-ink-6);
-  --color-separator: rgba(255, 255, 255, 0.08);
+  --color-separator: rgba(255, 255, 255, 0.07);
 
-  /* --- Radii — chunkier, matching the widget references -------------- */
-  --radius-chip: 12px;
-  --radius-card: 22px;
-  --radius-sheet: 28px;
-  --radius-block: 18px;
+  /* --- Radius: a deliberate hierarchy, not one value everywhere ------
+     pill  → buttons, chips, toggles: things you press
+     block → inputs and inner blocks nested inside a card
+     card  → whole cards
+     sheet → modal surfaces, the largest container
+     Nesting always steps DOWN, so an inner element is never rounder
+     than the container holding it. */
+  --radius-pill: 999px;
+  --radius-block: 14px;
+  --radius-card: 24px;
+  --radius-sheet: 32px;
 
-  /* --- Type scale ---------------------------------------------------- */
-  --text-mega: 4.5rem;          /* 72 — hero stat numerals */
+  /* --- Type scale (design-system.md §2.1) --------------------------- */
+  --text-mega: 4.5rem;          /* 72 */
   --text-display: 3rem;         /* 48 */
   --text-large-title: 2.25rem;  /* 36 */
   --text-title2: 1.375rem;      /* 22 */
@@ -61,13 +71,13 @@
   --text-footnote: 0.8125rem;   /* 13 */
   --text-caption1: 0.6875rem;   /* 11 */
 
-  /* Families only — sizes and tracking still come from design-system.md §2. */
-  --font-sans: var(--font-condensed), "Roboto Condensed", -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Inter for everything you read; condensed is reserved for headlines
+     and Anton for numerals. */
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: var(--font-condensed), "Roboto Condensed", system-ui, sans-serif;
   --font-hero-face: var(--font-hero), "Anton", Impact, sans-serif;
   --font-wordmark-face: var(--font-wordmark), "Righteous", system-ui, sans-serif;
-  /* The former mono role now rides on the condensed light face; see layout.tsx. */
-  --font-mono: var(--font-condensed), "Roboto Condensed", sans-serif;
+  --font-mono: var(--font-inter), sans-serif;
 }
 
 html {
@@ -78,25 +88,23 @@ html {
 body {
   background-color: var(--color-bg-primary);
   color: var(--color-label-primary);
-  /* Body / Subheadline / Footnote / Caption -> Roboto Condensed Light. */
+  /* Body copy is Inter — condensed light was too tight to read at 15–16px. */
   font-family: var(--font-sans);
-  font-weight: 300;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 /* ---- Typographic roles -------------------------------------------- */
 
-/* Large Title / Title 2 / Headline -> Roboto Condensed Bold. */
+/* Large Title / Title 2 / Headline — Roboto Condensed Bold. */
 .font-display {
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
-/* Hero numerals -> Anton. design-system.md §2.2: tighten large display
-   numbers; Anton is already narrow, so it takes less negative tracking than a
-   normal-width grotesque would. */
+/* Hero numerals — Anton. One per surface, as large as the layout allows. */
 .font-display-hero {
   font-family: var(--font-hero-face);
   font-weight: 400;
@@ -104,33 +112,28 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Splash wordmark -> Righteous, 50px. The one screen with its own face. */
+/* Splash wordmark — Righteous, 50px. */
 .font-wordmark {
   font-family: var(--font-wordmark-face);
   font-weight: 400;
   font-size: 50px;
   letter-spacing: 0.01em;
 }
-/* Eyebrows, axis labels and metric captions. Keeps the instrumentation read
-   through uppercase and wide tracking now that the mono face is gone. */
+
+/* The label half of the stat pattern: tiny, uppercase, wide-tracked, muted.
+   Always sits directly under a hero numeral. */
 .font-data {
   font-family: var(--font-sans);
-  font-weight: 400;
-  letter-spacing: 0.14em;
+  font-weight: 500;
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
 }
+
 .tnum {
   font-variant-numeric: tabular-nums;
 }
-
-/* Bracket motif from the reference — decorative, aria-hidden at call sites. */
-.bracket::before,
-.bracket::after {
-  color: var(--color-ink-6);
-  font-family: var(--font-mono);
-}
-.bracket::before { content: "[ "; }
-.bracket::after { content: " ]"; }
 
 /* ---- Focus --------------------------------------------------------- */
 :focus-visible {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
+import { Starburst } from '@/components/ui/Starburst';
 import { cn } from '@/lib/cn';
 import { spring, reducedFade } from '@/theme/theme';
 
@@ -89,10 +90,13 @@ export default function LoginPage() {
         initial={reduce ? { opacity: 0 } : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={reduce ? reducedFade : spring.default}
-        className="flex flex-1 flex-col items-center justify-center text-center"
+        // Left-aligned: a centred paragraph is the fastest way to make a
+        // product read as a template.
+        className="flex flex-1 flex-col justify-center"
       >
+        <Starburst size={56} className="mb-10 text-tint" strokeWidth={2.5} />
         <h1 className="font-wordmark leading-none">MOMENTUM</h1>
-        <p className="mt-4 max-w-[26ch] text-subheadline text-label-secondary">
+        <p className="mt-4 max-w-[30ch] text-body leading-relaxed text-label-secondary">
           Build better days. Miss one and your progress dips — it doesn&rsquo;t disappear.
         </p>
       </motion.div>
@@ -111,8 +115,8 @@ export default function LoginPage() {
                 setNotice(null);
               }}
               className={cn(
-                'flex-1 rounded-[var(--radius-block)] py-3 text-subheadline font-semibold transition-colors',
-                mode === m ? 'bg-white text-black' : 'bg-white/[0.05] text-label-secondary',
+                'flex-1 rounded-[var(--radius-pill)] py-3.5 text-subheadline font-semibold transition-colors',
+                mode === m ? 'bg-white text-black' : 'bg-bg-tertiary text-label-secondary',
               )}
             >
               {m === 'signIn' ? 'Sign in' : 'Create account'}

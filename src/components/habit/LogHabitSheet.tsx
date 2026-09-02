@@ -112,7 +112,7 @@ export function LogHabitSheet({
           <p
             role="status"
             className={cn(
-              'flex items-start gap-2 rounded-[var(--radius-chip)] bg-bg-secondary p-3',
+              'flex items-start gap-2 rounded-[var(--radius-block)] bg-bg-secondary p-3',
               'text-footnote text-label-secondary',
             )}
           >
@@ -144,7 +144,7 @@ export function LogHabitSheet({
                   transition={reduce ? reducedFade : spring.default}
                   className={cn(
                     'flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1.5',
-                    'rounded-[var(--radius-chip)] px-2 py-2 transition-colors',
+                    'rounded-[var(--radius-block)] px-2 py-2 transition-colors',
                     selected ? 'bg-bg-tertiary' : 'bg-bg-secondary hover:bg-bg-tertiary',
                     mood !== null && !selected && 'opacity-60',
                   )}

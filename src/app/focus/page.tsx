@@ -178,7 +178,7 @@ export default function FocusPage() {
           </div>
 
           <fieldset className="w-full">
-            <legend className="mb-2 text-center text-subheadline text-label-secondary">
+            <legend className="font-data mb-3 w-full text-center text-label-tertiary">
               Duration
             </legend>
             <div className="flex justify-center gap-2">
@@ -226,7 +226,7 @@ export default function FocusPage() {
           </button>
 
           {linkedHabit && (
-            <p className="-mt-3 text-center text-footnote text-label-secondary">
+            <p className="-mt-3 text-footnote leading-relaxed text-label-secondary">
               Linking records the session against {linkedHabit.name}. It doesn&rsquo;t mark the
               habit complete — log that separately.
             </p>
@@ -236,7 +236,7 @@ export default function FocusPage() {
         <section className="mt-10">
           <h2 className="mb-3 text-title2 font-bold">Today&rsquo;s sessions</h2>
           {todaySessions.length === 0 ? (
-            <p className="rounded-[var(--radius-card)] bg-bg-secondary px-5 py-6 text-center text-subheadline text-label-secondary">
+            <p className="rounded-[var(--radius-card)] bg-bg-secondary px-5 py-6 text-body text-label-secondary">
               No focus sessions yet today.
             </p>
           ) : (
@@ -246,12 +246,12 @@ export default function FocusPage() {
                 return (
                   <li
                     key={s.id}
-                    className="flex items-center gap-3 rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3"
+                    className="flex items-center gap-3 rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3.5"
                   >
                     <span
                       aria-hidden
                       className={cn(
-                        'inline-flex size-6 items-center justify-center rounded-full',
+                        'inline-flex size-7 items-center justify-center rounded-[8px]',
                         s.completed === 1 ? 'bg-positive' : 'bg-bg-tertiary',
                       )}
                     >
@@ -260,7 +260,7 @@ export default function FocusPage() {
                     <span className="flex-1 text-subheadline">
                       {s.durationMinutes} min{habit ? ` · ${habit.name}` : ''}
                     </span>
-                    <span className="text-footnote text-label-secondary">
+                    <span className="font-data text-label-tertiary">
                       {s.completed === 1 ? 'Completed' : 'Abandoned'}
                     </span>
                   </li>
@@ -284,7 +284,7 @@ export default function FocusPage() {
               setLinkedHabitId(null);
               setPickerOpen(false);
             }}
-            className="min-h-[44px] rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3 text-left text-body hover:bg-bg-tertiary"
+            className="min-h-[44px] rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3 text-left text-body hover:bg-bg-tertiary"
           >
             No habit — general focus time
           </button>
@@ -296,7 +296,7 @@ export default function FocusPage() {
                 setLinkedHabitId(h.id);
                 setPickerOpen(false);
               }}
-              className="flex min-h-[44px] items-center gap-3 rounded-[var(--radius-chip)] bg-bg-secondary px-4 py-3 text-left text-body hover:bg-bg-tertiary"
+              className="flex min-h-[44px] items-center gap-3 rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3 text-left text-body hover:bg-bg-tertiary"
             >
               <span
                 aria-hidden

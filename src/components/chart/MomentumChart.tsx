@@ -51,7 +51,7 @@ export function MomentumChart({ habits, days }: { habits: HabitView[]; days: num
 
   return (
     <div>
-      {/* Legend, in the bracketed instrumentation register of the reference. */}
+      {/* Legend: a solid swatch per habit, in the same hue as its bar. */}
       <ul className="mb-4 flex flex-wrap gap-x-5 gap-y-2">
         {habits.map((h) => (
           <li key={h.id} className="flex items-center gap-2">
@@ -123,7 +123,7 @@ export function MomentumChart({ habits, days }: { habits: HabitView[]; days: num
             />
 
             {/* Rendered in palette order, so amber sits at the base of the stack
-                and the warm ramp climbs — the reference's gradient. */}
+                and the warm ramp climbs through flat, solid segments. */}
             {habits.map((h, i) => (
               <Bar
                 key={h.id}

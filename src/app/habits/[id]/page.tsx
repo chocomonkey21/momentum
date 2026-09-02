@@ -15,7 +15,7 @@ import { AddHabitSheet } from '@/components/habit/AddHabitSheet';
 import { LogHabitSheet } from '@/components/habit/LogHabitSheet';
 import { habitInsight, MIN_LOGS_FOR_INSIGHT } from '@/lib/insights';
 import { adaptiveDifficultySuggestion } from '@/lib/momentum';
-import { MOOD_LABELS, MOOD_COLORS } from '@/theme/theme';
+import { MOOD_LABELS, MOOD_COLORS, chartHex, onChartHex } from '@/theme/theme';
 import { formatHHmm } from '@/lib/dates';
 import { format } from 'date-fns';
 import type { MoodTag } from '@/db/schema';
@@ -111,23 +111,35 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* --- Hero: the momentum ring gets the most visual weight (CLAUDE.md §3) --- */}
         <section className="mb-8 flex flex-col items-center gap-4">
-          <MomentumRing value={habit.momentumScore} label="Momentum" size={200} />
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-            <span className="inline-flex items-center gap-1.5 text-subheadline">
-              <Flame size={16} className="text-warning" aria-hidden />
-              {habit.streak} day streak
-            </span>
-            <span className="text-subheadline text-label-secondary">
-              {DIFFICULTY_NAMES[habit.difficultyLevel]}
-            </span>
-            <span className="text-subheadline text-label-secondary capitalize">
-              {habit.frequency}
-            </span>
-            {habit.timeConstraint && (
-              <span className="text-subheadline text-label-secondary">
-                by {formatHHmm(habit.timeConstraint)}
-              </span>
-            )}
+          <MomentumRing
+            value={habit.momentumScore}
+            label="Momentum"
+            size={200}
+            fillColor={chartHex(habit.chartColor)}
+          />
+          {/* Streak gets the stat pattern; the rest are quiet metadata chips. */}
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-baseline gap-2">
+              <Flame size={20} className="text-warning" aria-hidden />
+              <span className="font-display-hero text-[40px] leading-none">{habit.streak}</span>
+              <span className="font-data text-label-tertiary">day streak</span>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {[
+                DIFFICULTY_NAMES[habit.difficultyLevel],
+                habit.frequency,
+                habit.timeConstraint ? `by ${formatHHmm(habit.timeConstraint)}` : null,
+              ]
+                .filter(Boolean)
+                .map((chip) => (
+                  <span
+                    key={chip as string}
+                    className="rounded-[var(--radius-pill)] bg-bg-secondary px-3 py-1.5 text-footnote capitalize text-label-secondary"
+                  >
+                    {chip}
+                  </span>
+                ))}
+            </div>
           </div>
 
           <Button onClick={() => setLogOpen(true)} className="mt-2">
@@ -188,7 +200,7 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
         </section>
 
         {/* Destructive, deliberately lowest visual weight on the screen. */}
-        <section className="border-t border-separator pt-6">
+        <section className="border-t border-white/[0.07] pt-6">
           <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
             Delete Habit
           </Button>

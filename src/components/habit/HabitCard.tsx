@@ -4,27 +4,26 @@ import { memo, useState } from 'react';
 import { motion, useReducedMotion, useMotionValue, animate } from 'framer-motion';
 import { Flame, Trash2, Clock, Lock } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { spring, reducedFade, chartHex, chartAlpha, onChartHex, semantic } from '@/theme/theme';
-import { momentumBand } from '@/lib/momentum';
+import { spring, reducedFade, chartHex, onChartHex, semantic } from '@/theme/theme';
 import { formatHHmm } from '@/lib/dates';
 import { CompletionToggle } from './CompletionToggle';
 import { ContributionGrid } from '@/components/chart/ContributionGrid';
 import type { HabitView } from '@/context/AppContext';
 
 /**
- * Habit Card — colour-blocked in the habit's own hue.
+ * Habit Card — a solid block of the habit's own colour.
  *
- * The card carries a low-alpha wash and a matching hairline of its habit
- * colour, so a list of habits reads as a set of distinct blocks rather than
- * identical grey rows. The momentum number is the loudest thing on the card
- * (CLAUDE.md §3 — momentum is the hero).
+ * The card is a flat, fully-saturated fill, not a neutral card with a coloured
+ * accent. Colour carries category the way the charts and calendars already use
+ * it, just applied with more confidence: a list of habits reads as a stack of
+ * distinct blocks you can identify without reading a word.
+ *
+ * A habit that isn't done yet sits on the neutral surface and shows its colour
+ * only as a small marker — so "done today" is the state that earns the full
+ * block, and the screen visibly fills up with colour as the day is completed.
  *
  * Presentational only: it receives a habit and callbacks and never queries the
  * database itself (CLAUDE.md §6).
- *
- * Delete has three input paths per interaction-spec.md §13 — swipe on mobile,
- * hover icon on desktop, and a persistently focusable button for keyboard and
- * screen-reader users.
  */
 export const HabitCard = memo(function HabitCard({
   habit,
@@ -33,7 +32,6 @@ export const HabitCard = memo(function HabitCard({
   onDelete,
   statLabel,
   statValue,
-  /** Renders the GitHub-style activity grid inside the card (year view). */
   showGrid = false,
   gridWeeks = 30,
 }: {
@@ -51,9 +49,14 @@ export const HabitCard = memo(function HabitCard({
   const [revealed, setRevealed] = useState(false);
 
   const locked = habit.locked;
-  const band = momentumBand(habit.momentumScore);
   const accent = chartHex(habit.chartColor);
+  const onAccent = onChartHex(habit.chartColor);
   const done = habit.todayLog?.completed === 1;
+
+  // On a filled card every foreground colour derives from the fill, so text
+  // stays legible on amber and on vermillion alike.
+  const primaryText = done ? onAccent : semantic.labelPrimary;
+  const mutedText = done ? onAccent : semantic.labelSecondary;
 
   return (
     <div className="relative">
@@ -64,8 +67,8 @@ export const HabitCard = memo(function HabitCard({
             aria-label={`Delete ${habit.name}`}
             onClick={() => onDelete(habit.id)}
             className={cn(
-              'inline-flex size-11 items-center justify-center rounded-[14px]',
-              'bg-destructive/15 text-destructive transition-opacity',
+              'inline-flex size-11 items-center justify-center rounded-[var(--radius-pill)]',
+              'bg-destructive text-white transition-opacity',
               revealed ? 'opacity-100' : 'opacity-0',
             )}
           >
@@ -80,25 +83,19 @@ export const HabitCard = memo(function HabitCard({
         dragElastic={0.05}
         style={{
           x,
-          // Tinted wash: stronger once the habit is done for today, so
-          // completion is legible from across the room.
-          background: `linear-gradient(160deg, ${chartAlpha(
-            habit.chartColor,
-            done ? 0.22 : 0.12,
-          )} 0%, rgba(255,255,255,0.02) 60%)`,
-          borderColor: chartAlpha(habit.chartColor, done ? 0.45 : 0.22),
+          // One flat fill. No gradient, no wash, no shadow.
+          backgroundColor: done ? accent : semantic.bgSecondary,
         }}
         onDragEnd={(_, info) => {
           const shouldReveal = info.offset.x < -40;
           setRevealed(shouldReveal);
           animate(x, shouldReveal ? -72 : 0, reduce ? { duration: 0.12 } : spring.default);
         }}
-        whileHover={reduce ? undefined : { y: -3 }}
-        whileTap={reduce ? { opacity: 0.9 } : { scale: 0.985 }}
+        whileTap={reduce ? { opacity: 0.92 } : { scale: 0.985 }}
         transition={reduce ? reducedFade : spring.default}
         className={cn(
-          'group relative rounded-[var(--radius-card)] border bg-bg-secondary p-4',
-          'transition-shadow duration-150 hover:shadow-2xl hover:shadow-black/60',
+          'group relative rounded-[var(--radius-card)] p-4 transition-colors duration-200',
+          !done && 'hover:bg-bg-tertiary',
         )}
       >
         <div className="flex items-center gap-4">
@@ -106,8 +103,8 @@ export const HabitCard = memo(function HabitCard({
             completed={done}
             onToggle={(next) => onToggle(habit.id, next)}
             habitName={habit.name}
-            accent={accent}
-            onAccent={onChartHex(habit.chartColor)}
+            accent={done ? onAccent : accent}
+            onAccent={done ? accent : onChartHex(habit.chartColor)}
             locked={locked}
             lockedReason={
               habit.timeConstraint
@@ -126,30 +123,37 @@ export const HabitCard = memo(function HabitCard({
           >
             {habit.categoryTag && (
               <p
-                className="font-data mb-1 text-[10px]"
-                style={{ color: chartAlpha(habit.chartColor, 0.9) }}
+                className="font-data mb-1.5"
+                style={{ color: mutedText, opacity: done ? 0.7 : 1 }}
               >
                 {habit.categoryTag}
               </p>
             )}
-            <p className="font-display truncate text-[19px] leading-tight text-label-primary">
+            <p
+              className="font-display truncate text-[19px] leading-tight"
+              style={{ color: primaryText }}
+            >
               {habit.name}
             </p>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
               {habit.streak > 0 && (
-                <span className="inline-flex items-center gap-1 text-footnote text-label-secondary">
-                  <Flame size={13} className="text-warning" aria-hidden />
+                <span
+                  className="inline-flex items-center gap-1 text-footnote"
+                  style={{ color: mutedText, opacity: done ? 0.75 : 1 }}
+                >
+                  <Flame size={13} aria-hidden />
                   <span className="tnum">{habit.streak}</span> day
                   {habit.streak === 1 ? '' : 's'}
                 </span>
               )}
               {habit.timeConstraint && (
                 <span
-                  className={cn(
-                    'inline-flex items-center gap-1 text-footnote',
-                    locked ? 'text-label-tertiary' : 'text-warning',
-                  )}
+                  className="inline-flex items-center gap-1 text-footnote"
+                  style={{
+                    color: done ? mutedText : locked ? semantic.labelTertiary : semantic.warning,
+                    opacity: done ? 0.75 : 1,
+                  }}
                 >
                   {locked ? <Lock size={12} aria-hidden /> : <Clock size={12} aria-hidden />}
                   {locked ? 'Closed' : `by ${formatHHmm(habit.timeConstraint)}`}
@@ -158,23 +162,18 @@ export const HabitCard = memo(function HabitCard({
             </div>
           </button>
 
+          {/* Stat pattern: numeral over a tiny uppercase label. */}
           <div className="flex shrink-0 flex-col items-end">
             <span
               className="font-display-hero text-[34px] leading-none"
-              style={{
-                // Zero is NEVER destructive red — a dipping score is warning at
-                // worst (CLAUDE.md §4).
-                color:
-                  statValue !== undefined
-                    ? semantic.labelPrimary
-                    : band === 'dipping'
-                      ? semantic.warning
-                      : accent,
-              }}
+              style={{ color: done ? onAccent : accent }}
             >
               {statValue ?? Math.round(habit.momentumScore)}
             </span>
-            <span className="font-data mt-1 text-[9px] text-label-tertiary">
+            <span
+              className="font-data mt-1.5"
+              style={{ color: mutedText, opacity: done ? 0.7 : 1 }}
+            >
               {statLabel ?? 'Momentum'}
             </span>
           </div>
@@ -185,10 +184,11 @@ export const HabitCard = memo(function HabitCard({
               aria-label={`Delete ${habit.name}`}
               onClick={() => onDelete(habit.id)}
               className={cn(
-                'ml-1 hidden size-11 shrink-0 items-center justify-center rounded-[14px] lg:inline-flex',
-                'text-label-tertiary opacity-0 transition-opacity duration-150',
-                'group-hover:opacity-100 focus-visible:opacity-100 hover:text-destructive',
+                'ml-1 hidden size-11 shrink-0 items-center justify-center rounded-[var(--radius-pill)] lg:inline-flex',
+                'opacity-0 transition-opacity duration-150',
+                'group-hover:opacity-60 focus-visible:opacity-100 hover:!opacity-100',
               )}
+              style={{ color: mutedText }}
             >
               <Trash2 size={18} aria-hidden />
             </button>
@@ -196,7 +196,10 @@ export const HabitCard = memo(function HabitCard({
         </div>
 
         {showGrid && (
-          <div className="mt-4 border-t border-white/5 pt-4">
+          <div
+            className="mt-4 border-t pt-4"
+            style={{ borderColor: done ? 'rgba(0,0,0,0.15)' : semantic.separator }}
+          >
             <ContributionGrid
               logs={habit.logs}
               color={habit.chartColor}

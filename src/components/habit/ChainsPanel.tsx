@@ -98,8 +98,7 @@ export function ChainsPanel({
                   }
                   transition={{ duration: 0.6, ease: 'easeOut' }}
                   className={cn(
-                    'group rounded-[var(--radius-card)] bg-bg-secondary p-5',
-                    'transition-shadow hover:shadow-lg hover:shadow-black/40',
+                    'group rounded-[var(--radius-card)] bg-bg-secondary p-5 transition-colors',
                     complete && 'ring-1 ring-positive/40',
                   )}
                 >
@@ -160,7 +159,7 @@ export function ChainsPanel({
                         <li key={habit.id} className="flex items-center gap-2">
                           <span
                             className={cn(
-                              'inline-flex items-center gap-1.5 rounded-[var(--radius-chip)] px-3 py-1.5',
+                              'inline-flex items-center gap-1.5 rounded-[var(--radius-block)] px-3 py-1.5',
                               'text-footnote transition-colors',
                               isDone ? 'text-black' : 'bg-bg-tertiary text-label-primary',
                             )}

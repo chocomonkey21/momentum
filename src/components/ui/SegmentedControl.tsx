@@ -45,7 +45,7 @@ export function SegmentedControl<T extends string>({
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        'inline-flex w-full gap-1 rounded-[var(--radius-chip)] p-1',
+        'inline-flex w-full gap-1 rounded-[var(--radius-block)] p-1',
         variant === 'solid' ? 'bg-bg-secondary' : 'bg-white/[0.04]',
         className,
       )}

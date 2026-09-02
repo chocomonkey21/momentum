@@ -11,7 +11,8 @@ import { MomentumChart } from '@/components/chart/MomentumChart';
 import { InsightCard } from '@/components/habit/InsightCard';
 import { aggregateInsight, MIN_LOGS_FOR_INSIGHT } from '@/lib/insights';
 import { momentumBand } from '@/lib/momentum';
-import { chartHex, semantic } from '@/theme/theme';
+import { chartHex, onChartHex, semantic } from '@/theme/theme';
+import { Stat } from '@/components/ui/Stat';
 
 type Range = 'week' | 'year';
 
@@ -73,26 +74,17 @@ export default function StatsPage() {
           <div className="flex flex-col gap-6">
             {/* --- Chart column (two-thirds on desktop, ui-spec.md §11) --- */}
             <div>
-              <section className="mb-5">
-                <p className="font-data text-[10px] text-label-tertiary">Overall momentum</p>
-                {/* The one hero number on this screen. */}
-                <p
-                  // `text-[length:...]` is required here: a bare
-                  // `text-[var(--x)]` is ambiguous and Tailwind resolves it as a
-                  // colour, which silently left this at the inherited size.
-                  className="font-display-hero text-[length:var(--text-mega)] leading-[0.85]"
-                  style={{
-                    color:
-                      momentumBand(overall) === 'strong'
-                        ? semantic.positive
-                        : semantic.labelPrimary,
-                  }}
-                >
-                  {overall}
-                </p>
-                <p className="mt-1 text-footnote text-label-secondary">
-                  Average across {habits.length} active habit{habits.length === 1 ? '' : 's'}
-                </p>
+              {/* The one hero number on this screen, in the app-wide stat
+                  pattern: giant numeral, tiny uppercase label beneath. */}
+              <section className="mb-6">
+                <Stat
+                  size="xl"
+                  value={overall}
+                  label={`Overall momentum · ${habits.length} habit${habits.length === 1 ? '' : 's'}`}
+                  valueColor={
+                    momentumBand(overall) === 'strong' ? semantic.positive : semantic.labelPrimary
+                  }
+                />
               </section>
 
               <div className="mb-4 max-w-xs">
@@ -123,21 +115,27 @@ export default function StatsPage() {
                           h.momentumScore,
                         )} of 100. Open details.`}
                         className={[
-                          'flex w-full min-h-[44px] items-center gap-3 rounded-[var(--radius-chip)]',
-                          'px-4 py-3 text-left transition-colors hover:bg-bg-secondary',
+                          'flex w-full min-h-[56px] items-center gap-3 rounded-[var(--radius-block)]',
+                          'bg-bg-secondary px-4 py-3 text-left transition-colors hover:bg-bg-tertiary',
                         ].join(' ')}
                       >
-                        {/* Swatch matches this habit's chart band exactly. */}
+                        {/* Solid chip in the habit's own hue — same colour it
+                            carries in the chart, on its card, in its grid. */}
                         <span
                           aria-hidden
-                          className="size-3 shrink-0 rounded-full"
-                          style={{ backgroundColor: chartHex(h.chartColor) }}
-                        />
+                          className="inline-flex size-8 shrink-0 items-center justify-center rounded-[10px] font-display text-[13px]"
+                          style={{
+                            backgroundColor: chartHex(h.chartColor),
+                            color: onChartHex(h.chartColor),
+                          }}
+                        >
+                          {h.name.charAt(0).toUpperCase()}
+                        </span>
                         <span className="min-w-0 flex-1 truncate text-subheadline">{h.name}</span>
-                        <span className="text-headline font-semibold tabular-nums">
+                        <span className="font-display-hero text-[24px] leading-none">
                           {Math.round(h.momentumScore)}
                         </span>
-                        <ChevronRight size={16} className="text-label-secondary" aria-hidden />
+                        <ChevronRight size={16} className="text-label-tertiary" aria-hidden />
                       </button>
                     </li>
                   ))}

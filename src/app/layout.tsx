@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Righteous, Anton, Roboto_Condensed } from 'next/font/google';
+import { Righteous, Anton, Roboto_Condensed, Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { AppProvider } from '@/context/AppContext';
@@ -14,17 +14,16 @@ import { AuthGate } from '@/components/ui/AuthGate';
  *                    momentum score, streak counts, timer digits.
  *  Roboto Condensed 700 — the bold rows of the §2.1 scale: Large Title,
  *                    Title 2, Headline.
- *  Roboto Condensed 300 — the regular rows: Body, Subheadline, Footnote,
- *                    Caption 1.
+ *  Inter 400/500 — everything you read: body, list rows, form labels,
+ *                    secondary copy, and the tiny uppercase stat labels.
+ *                    Roboto Condensed Light was too tight at body sizes;
+ *                    condensed is now reserved for headlines and numerals.
  *
  * Only the families changed; every size and letter-spacing rule still comes
  * from design-system.md §2.
  *
- * Note on the data/eyebrow role: the previous build used a monospace face for
- * axis labels and stat captions. §2 defines no mono role and this brief
- * replaces the type choices wholesale, so that role now renders in Roboto
- * Condensed Light, keeping its instrumentation read through uppercase and
- * wide tracking rather than through a fifth family.
+ * Stat labels (the small half of every stat pair) are Inter 500 uppercase with
+ * wide tracking — quiet enough to never compete with the numeral above them.
  */
 const wordmarkFace = Righteous({
   weight: '400',
@@ -40,11 +39,17 @@ const heroFace = Anton({
   variable: '--font-hero',
 });
 
-const uiFace = Roboto_Condensed({
-  weight: ['300', '400', '700'],
+const condensedFace = Roboto_Condensed({
+  weight: ['700'],
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-condensed',
+});
+
+const uiFace = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
 });
 
 export const metadata: Metadata = {
@@ -64,7 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${wordmarkFace.variable} ${heroFace.variable} ${uiFace.variable}`}
+      className={`${wordmarkFace.variable} ${heroFace.variable} ${condensedFace.variable} ${uiFace.variable}`}
     >
       <body className="bg-ink1 text-label-primary antialiased">
         <AuthProvider>
@@ -77,7 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             same app, centred, with the surrounding page reading as inert
             backdrop rather than empty dead space.
           */}
-          <div className="relative mx-auto min-h-dvh w-full max-w-[440px] bg-bg-primary shadow-[0_0_80px_rgba(0,0,0,0.9)] sm:border-x sm:border-white/[0.06]">
+          <div className="relative mx-auto min-h-dvh w-full max-w-[440px] bg-bg-primary sm:border-x sm:border-white/[0.07]">
             <AuthGate>{children}</AuthGate>
           </div>
           </AppProvider>
