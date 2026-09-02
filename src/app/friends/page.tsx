@@ -15,7 +15,7 @@ import { semantic, palette } from '@/theme/theme';
 
 type Tab = 'friends' | 'challenges';
 
-const AVATAR_COLORS = [palette.amber, palette.blue, palette.orange, palette.cyan, palette.vermillion];
+const AVATAR_COLORS = [palette.vermillion, palette.amber, palette.magenta, palette.blue, palette.plum];
 
 /**
  * Friends & Challenges (PRD.md §7, Phase 2).
@@ -106,7 +106,7 @@ export default function FriendsPage() {
                           username={f.username}
                           colorIndex={i}
                           trailing={
-                            <span className="font-data inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-bg-tertiary px-3 py-2 text-label-secondary">
+                            <span className="font-data inline-flex items-center gap-2 rounded-[var(--radius-pill)] border-2 border-ink5 px-3 py-2 text-label-secondary">
                               <Clock size={12} aria-hidden />
                               Pending
                             </span>
@@ -119,7 +119,7 @@ export default function FriendsPage() {
               )}
 
               <section>
-                <h2 className="font-display mb-3 text-title2">Your friends</h2>
+                <h2 className="font-display mb-3 text-title2">Your Friends</h2>
                 <ul className="flex flex-col gap-2">
                   {accepted.map((f, i) => (
                     <li key={f.id}>
@@ -128,7 +128,7 @@ export default function FriendsPage() {
                         username={f.username}
                         colorIndex={i}
                         trailing={
-                          <span className="font-data inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-positive px-3 py-2 text-black">
+                          <span className="font-data inline-flex items-center gap-2 rounded-[var(--radius-pill)] border-2 border-positive px-3 py-2 text-positive">
                             <Check size={12} strokeWidth={3} aria-hidden />
                             Friends
                           </span>
@@ -150,22 +150,29 @@ export default function FriendsPage() {
             {challengeRows.map((challenge) => (
               <li key={challenge.id}>
                 <section className="overflow-hidden rounded-[var(--radius-card)] bg-bg-secondary">
-                  {/* Amber header block: the challenge is the prize. */}
-                  <div
-                    className="flex items-start gap-3 p-5"
-                    style={{ backgroundColor: palette.amber, color: palette.ink0 }}
-                  >
+                  {/* Header: amber title and a filled amber trophy disc on the
+                      neutral card — the prize, without a second solid slab. */}
+                  <div className="flex items-start gap-3 p-5 pb-0">
                     <div className="min-w-0 flex-1">
-                      <p className="font-data opacity-70">{challenge.goalMetric}</p>
-                      <h2 className="font-display mt-1 text-[24px] leading-tight">
+                      <p className="font-data text-label-tertiary">{challenge.goalMetric}</p>
+                      <h2
+                        className="font-display mt-1 text-[24px] leading-tight"
+                        style={{ color: palette.amber }}
+                      >
                         {challenge.challengeName}
                       </h2>
-                      <p className="font-data mt-2 opacity-70">
+                      <p className="font-data mt-2 text-label-tertiary">
                         {format(new Date(challenge.startDate + 'T00:00:00'), 'd MMM')} –{' '}
                         {format(new Date(challenge.endDate + 'T00:00:00'), 'd MMM')}
                       </p>
                     </div>
-                    <Trophy size={22} className="shrink-0" aria-hidden />
+                    <span
+                      className="inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-pill)] text-black"
+                      style={{ backgroundColor: palette.amber }}
+                      aria-hidden
+                    >
+                      <Trophy size={20} />
+                    </span>
                   </div>
 
                   <ol className="flex flex-col gap-3 p-5">
@@ -223,7 +230,7 @@ export default function FriendsPage() {
       <Sheet
         open={addOpen}
         onOpenChange={setAddOpen}
-        title="Add a friend"
+        title="Add a Friend"
         description="Send a request by username."
       >
         <div className="flex flex-col gap-4">

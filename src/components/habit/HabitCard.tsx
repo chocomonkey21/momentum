@@ -11,19 +11,22 @@ import { ContributionGrid } from '@/components/chart/ContributionGrid';
 import type { HabitView } from '@/context/AppContext';
 
 /**
- * Habit Card — a solid block of the habit's own colour.
+ * Habit Card.
  *
- * The card is a flat, fully-saturated fill, not a neutral card with a coloured
- * accent. Colour carries category the way the charts and calendars already use
- * it, just applied with more confidence: a list of habits reads as a stack of
- * distinct blocks you can identify without reading a word.
+ * Two states, two silhouettes — the filled-versus-outlined rhythm the whole
+ * app uses:
  *
- * A habit that isn't done yet sits on the neutral surface and shows its colour
- * only as a small marker — so "done today" is the state that earns the full
- * block, and the screen visibly fills up with colour as the day is completed.
+ *   not done  → a neutral surface with the habit's hue on its numeral only
+ *   done      → an OUTLINED pill in the habit's hue, black inside, with the
+ *               hue on the border, the category label, the numeral and the
+ *               filled check circle
  *
- * Presentational only: it receives a habit and callbacks and never queries the
- * database itself (CLAUDE.md §6).
+ * A list of five completed habits therefore reads as five coloured rings on
+ * black, not five solid slabs. Solid fills are reserved for the one hero
+ * block per screen (the Home "Today" block when the day is complete).
+ *
+ * Presentational only: it receives a habit and callbacks and never queries
+ * the database itself (CLAUDE.md §6).
  */
 export const HabitCard = memo(function HabitCard({
   habit,
@@ -53,14 +56,6 @@ export const HabitCard = memo(function HabitCard({
   const onAccent = onChartHex(habit.chartColor);
   const done = habit.todayLog?.completed === 1;
 
-  // On a filled card every foreground colour derives from the fill, so text
-  // stays legible on amber and on vermillion alike.
-  const primaryText = done ? onAccent : semantic.labelPrimary;
-  const mutedText = done ? onAccent : semantic.labelSecondary;
-  // White can't be dimmed on blue and still clear AA; black on the light
-  // hues can. So the muting opacity depends on which text colour we got.
-  const mute = done && onAccent === palette.ink0 ? 0.7 : 1;
-
   return (
     <div className="relative">
       {onDelete && (
@@ -86,8 +81,9 @@ export const HabitCard = memo(function HabitCard({
         dragElastic={0.05}
         style={{
           x,
-          // One flat fill. No gradient, no wash, no shadow.
-          backgroundColor: done ? accent : semantic.bgSecondary,
+          // Outlined when done, neutral surface when not. Never a solid fill.
+          backgroundColor: done ? palette.ink0 : semantic.bgSecondary,
+          borderColor: done ? accent : 'transparent',
         }}
         onDragEnd={(_, info) => {
           const shouldReveal = info.offset.x < -40;
@@ -97,7 +93,7 @@ export const HabitCard = memo(function HabitCard({
         whileTap={reduce ? { opacity: 0.92 } : { scale: 0.985 }}
         transition={reduce ? reducedFade : spring.default}
         className={cn(
-          'group relative rounded-[var(--radius-card)] p-4 transition-colors duration-200',
+          'group relative rounded-[var(--radius-card)] border-2 p-4 transition-colors duration-200',
           !done && 'hover:bg-bg-tertiary',
         )}
       >
@@ -106,8 +102,8 @@ export const HabitCard = memo(function HabitCard({
             completed={done}
             onToggle={(next) => onToggle(habit.id, next)}
             habitName={habit.name}
-            accent={done ? onAccent : accent}
-            onAccent={done ? accent : onChartHex(habit.chartColor)}
+            accent={accent}
+            onAccent={onAccent}
             locked={locked}
             lockedReason={
               habit.timeConstraint
@@ -125,26 +121,15 @@ export const HabitCard = memo(function HabitCard({
             )} of 100, ${habit.streak} day streak. Open details.`}
           >
             {habit.categoryTag && (
-              <p
-                className="font-data mb-2"
-                style={{ color: mutedText, opacity: mute }}
-              >
-                {habit.categoryTag}
-              </p>
+              <p className="font-data mb-2 text-label-tertiary">{habit.categoryTag}</p>
             )}
-            <p
-              className="font-display truncate text-[19px] leading-tight"
-              style={{ color: primaryText }}
-            >
+            <p className="font-display truncate text-[19px] leading-tight text-label-primary">
               {habit.name}
             </p>
 
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
               {habit.streak > 0 && (
-                <span
-                  className="inline-flex items-center gap-1 text-footnote"
-                  style={{ color: mutedText, opacity: mute }}
-                >
+                <span className="inline-flex items-center gap-1 text-footnote text-label-secondary">
                   <Flame size={13} aria-hidden />
                   <span className="tnum">{habit.streak}</span> day
                   {habit.streak === 1 ? '' : 's'}
@@ -154,8 +139,11 @@ export const HabitCard = memo(function HabitCard({
                 <span
                   className="inline-flex items-center gap-1 text-footnote"
                   style={{
-                    color: done ? mutedText : locked ? semantic.labelTertiary : semantic.warning,
-                    opacity: mute,
+                    color: locked
+                      ? semantic.labelTertiary
+                      : done
+                        ? semantic.labelSecondary
+                        : semantic.warning,
                   }}
                 >
                   {locked ? <Lock size={12} aria-hidden /> : <Clock size={12} aria-hidden />}
@@ -165,20 +153,14 @@ export const HabitCard = memo(function HabitCard({
             </div>
           </button>
 
-          {/* Stat pattern: numeral over a tiny uppercase label. */}
+          {/* Stat pattern: numeral over a tiny uppercase label. The numeral is
+              always in the habit's hue — the one place the hue shows on an
+              undone card. */}
           <div className="flex shrink-0 flex-col items-end">
-            <span
-              className="font-display-hero text-[36px] leading-none"
-              style={{ color: done ? onAccent : accent }}
-            >
+            <span className="font-display-hero text-[36px] leading-none" style={{ color: accent }}>
               {statValue ?? Math.round(habit.momentumScore)}
             </span>
-            <span
-              className="font-data mt-2"
-              style={{ color: mutedText, opacity: mute }}
-            >
-              {statLabel ?? 'Momentum'}
-            </span>
+            <span className="font-data mt-2 text-label-tertiary">{statLabel ?? 'Momentum'}</span>
           </div>
 
           {onDelete && (
@@ -188,10 +170,9 @@ export const HabitCard = memo(function HabitCard({
               onClick={() => onDelete(habit.id)}
               className={cn(
                 'ml-1 hidden size-11 shrink-0 items-center justify-center rounded-[var(--radius-pill)] lg:inline-flex',
-                'opacity-0 transition-opacity duration-150',
+                'text-label-secondary opacity-0 transition-opacity duration-150',
                 'group-hover:opacity-60 focus-visible:opacity-100 hover:!opacity-100',
               )}
-              style={{ color: mutedText }}
             >
               <Trash2 size={18} aria-hidden />
             </button>
@@ -199,10 +180,7 @@ export const HabitCard = memo(function HabitCard({
         </div>
 
         {showGrid && (
-          <div
-            className="mt-4 border-t pt-4"
-            style={{ borderColor: done ? 'rgba(0,0,0,0.15)' : semantic.separator }}
-          >
+          <div className="mt-4 border-t border-white/[0.07] pt-4">
             <ContributionGrid
               logs={habit.logs}
               color={habit.chartColor}

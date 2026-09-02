@@ -194,7 +194,7 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
         )}
 
         <section className="mb-8">
-          <h2 className="font-display mb-3 text-title2">Last 21 days</h2>
+          <h2 className="font-display mb-3 text-title2">Last 21 Days</h2>
           <div className="rounded-[var(--radius-card)] bg-bg-secondary p-5">
             <StreakDotRow logs={habit.logs} />
           </div>

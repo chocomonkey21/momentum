@@ -49,7 +49,7 @@ export function CompletionToggle({
   useEffect(() => setOptimistic(completed), [completed]);
 
   const isOn = optimistic;
-  const radius = Math.round(size * 0.32);
+  const radius = size / 2;
 
   function press() {
     if (locked) return;

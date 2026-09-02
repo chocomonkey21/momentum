@@ -15,6 +15,9 @@ import type { PomodoroSession } from '@/db/schema';
 import { cn } from '@/lib/cn';
 import { semantic, palette } from '@/theme/theme';
 
+const BADGE_HUES = [palette.vermillion, palette.amber, palette.magenta, palette.blue, palette.plum];
+const onHue = (h: string) => (h === palette.blue || h === palette.plum ? palette.white : palette.ink0);
+
 /**
  * Profile (ui-spec.md §13) — identity, lifetime stats, achievements, and the
  * entry point to Settings.
@@ -98,14 +101,11 @@ export default function ProfilePage() {
             <Skeleton className="h-24 w-full rounded-[var(--radius-card)]" />
           ) : (
             <dl className="grid grid-cols-3 gap-3">
-              <StatTile
-                label="Best streak"
-                value={stats.bestStreak}
-                bg={semantic.tint}
-                fg={palette.white}
-              />
-              <StatTile label="Completions" value={stats.completions} />
-              <StatTile label="Consistency" value={stats.consistency} suffix="%" />
+              {/* Three hues, three outlined tiles; the amber identity block
+                  above is the only solid fill on the screen. */}
+              <StatTile label="Best Streak" value={stats.bestStreak} hue={palette.vermillion} />
+              <StatTile label="Completions" value={stats.completions} hue={palette.magenta} />
+              <StatTile label="Consistency" value={stats.consistency} suffix="%" hue={palette.blue} />
             </dl>
           )}
         </section>
@@ -118,42 +118,44 @@ export default function ProfilePage() {
             </span>
           </div>
 
-          <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-            {achievements.map((a) => (
+          {/* Badges are circles, cycling the five hues — the icon rings from
+              the reference. Unlocked = filled disc; locked = a dim outlined
+              ring with a lock (design-system.md §7). No tile behind them, so
+              the section reads differently from every card list above. */}
+          <ul className="grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-4">
+            {achievements.map((a, i) => {
+              const hue = BADGE_HUES[i % BADGE_HUES.length];
+              return (
               <li key={a.id}>
                 <button
                   type="button"
                   onClick={() => setDetail(a)}
                   aria-label={`${a.name}, ${a.unlocked ? 'unlocked' : 'locked'}. ${a.criteria}.`}
-                  className={cn(
-                    'flex w-full flex-col items-center gap-3 rounded-[var(--radius-card)]',
-                    'bg-bg-secondary px-2 py-5 transition-colors hover:bg-bg-tertiary',
-                  )}
+                  className="flex w-full flex-col items-center gap-3 rounded-[var(--radius-card)] px-2 py-2 transition-transform hover:-translate-y-1"
                 >
-                  {/* Unlocked badges are a solid block of colour; locked ones
-                      stay neutral and dim (design-system.md §7). */}
                   <span
                     aria-hidden
-                    className="inline-flex size-11 items-center justify-center rounded-[var(--radius-block)]"
+                    className="inline-flex size-16 items-center justify-center rounded-[var(--radius-pill)] border-2"
                     style={
                       a.unlocked
-                        ? { backgroundColor: palette.amber, color: palette.ink0 }
-                        : { backgroundColor: semantic.bgTertiary, color: semantic.labelTertiary }
+                        ? { backgroundColor: hue, borderColor: hue, color: onHue(hue) }
+                        : { borderColor: palette.ink5, color: semantic.labelTertiary }
                     }
                   >
-                    {a.unlocked ? <Award size={20} /> : <Lock size={17} />}
+                    {a.unlocked ? <Award size={26} strokeWidth={1.75} /> : <Lock size={20} strokeWidth={1.75} />}
                   </span>
                   <span
                     className={cn(
-                      'text-center text-caption1 leading-tight',
-                      a.unlocked ? 'text-label-primary' : 'text-label-secondary',
+                      'text-center text-footnote font-medium leading-tight',
+                      a.unlocked ? 'text-label-primary' : 'text-label-tertiary',
                     )}
                   >
                     {a.name}
                   </span>
                 </button>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </section>
 
@@ -207,15 +209,13 @@ function StatTile({
   label,
   value,
   suffix = '',
-  bg,
-  fg,
+  hue,
 }: {
   label: string;
   value: number;
   suffix?: string;
-  /** Optional solid fill — one tile per row earns colour, the rest stay neutral. */
-  bg?: string;
-  fg?: string;
+  /** Outline + numeral colour. */
+  hue: string;
 }) {
   const reduce = useReducedMotion();
   const [shown, setShown] = useState(reduce ? value : 0);
@@ -239,15 +239,12 @@ function StatTile({
 
   return (
     // The stat pattern: numeral, then a tiny uppercase label beneath it.
-    <div
-      className="rounded-[var(--radius-card)] px-4 py-5"
-      style={{ backgroundColor: bg ?? semantic.bgSecondary, color: fg ?? palette.white }}
-    >
-      <dd className="font-display-hero text-[36px] leading-none">
+    <div className="rounded-[var(--radius-card)] border-2 px-4 py-5" style={{ borderColor: hue }}>
+      <dd className="font-display-hero text-[36px] leading-none" style={{ color: hue }}>
         <motion.span>{shown}</motion.span>
         {suffix}
       </dd>
-      <dt className={cn('font-data mt-2', !bg && 'opacity-70')}>{label}</dt>
+      <dt className="font-data mt-2 text-label-tertiary">{label}</dt>
     </div>
   );
 }

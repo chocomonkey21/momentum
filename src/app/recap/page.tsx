@@ -19,13 +19,15 @@ import { cn } from '@/lib/cn';
  * pills — the same treatment habit cards use, at chip scale.
  * Slipping is WARNING orange, never destructive red: a dip is not an error.
  */
-const VERDICT_STYLES: Record<Verdict, { bg: string; fg: string }> = {
-  'Strong week': { bg: semantic.positive, fg: palette.ink0 },
-  // Cyan, not tint blue: every verdict card carries black text at 70–85%
-  // opacity, and black clears AA on cyan (6.2:1) where white on blue at
-  // the same opacity does not (3.0:1). Tint stays reserved for actions.
-  Steady: { bg: palette.cyan, fg: palette.ink0 },
-  Slipping: { bg: semantic.warning, fg: palette.ink0 },
+/**
+ * The verdict colours the card's OUTLINE and its numeral; the card itself
+ * stays black. Green / blue / orange rings down the page, never three solid
+ * slabs. Slipping is warning orange, never destructive red.
+ */
+const VERDICT_STYLES: Record<Verdict, { hue: string }> = {
+  'Strong week': { hue: semantic.positive },
+  Steady: { hue: palette.blue },
+  Slipping: { hue: semantic.warning },
 };
 
 /**
@@ -82,7 +84,7 @@ export default function RecapPage() {
     <Screen>
       <PageFade>
         <ScreenHeader
-          title="Weekly recap"
+          title="Weekly Recap"
           eyebrow={`Week of ${format(subDays(new Date(), 6), 'd MMMM')}`}
         />
 
@@ -121,31 +123,38 @@ export default function RecapPage() {
                   onClick={() => router.push(`/habits/${habit.id}`)}
                   aria-label={`${habit.name}, ${verdict}, ${completions} of ${outOf} days. Open details.`}
                   className={cn(
-                    'w-full rounded-[var(--radius-card)] p-5 text-left',
-                    'transition-transform duration-150 hover:-translate-y-0.5',
+                    'w-full rounded-[var(--radius-card)] border-2 bg-bg-primary p-5 text-left',
+                    'transition-transform duration-150 hover:-translate-y-1',
                   )}
-                  // The verdict IS the card colour: green, blue or orange
-                  // blocks, read at a glance before a word is parsed.
-                  style={{
-                    backgroundColor: VERDICT_STYLES[verdict].bg,
-                    color: VERDICT_STYLES[verdict].fg,
-                  }}
+                  style={{ borderColor: VERDICT_STYLES[verdict].hue }}
                 >
                   <div className="mb-5 flex items-center gap-3">
-                    <span className="font-data min-w-0 flex-1 truncate opacity-70">{habit.name}</span>
-                    <span className="font-display shrink-0 rounded-[var(--radius-pill)] bg-black/15 px-3 py-2 text-[14px] uppercase tracking-[0.04em]">
+                    <span className="font-data min-w-0 flex-1 truncate text-label-tertiary">
+                      {habit.name}
+                    </span>
+                    <span
+                      className="font-display shrink-0 rounded-[var(--radius-pill)] px-3 py-2 text-[14px] uppercase tracking-[0.04em] text-black"
+                      style={{ backgroundColor: VERDICT_STYLES[verdict].hue }}
+                    >
                       {verdict}
                     </span>
-                    <ChevronRight size={16} className="shrink-0 opacity-60" aria-hidden />
+                    <ChevronRight size={16} className="shrink-0 text-label-tertiary" aria-hidden />
                   </div>
 
                   {/* Stat pattern — the week's count is the number that matters. */}
                   <div className="mb-4 flex items-baseline gap-2">
-                    <span className="font-display-hero text-[56px] leading-none">{completions}</span>
-                    <span className="font-display-hero text-[22px] leading-none opacity-60">/{outOf}</span>
-                    <span className="font-data ml-1 opacity-70">days</span>
+                    <span
+                      className="font-display-hero text-[56px] leading-none"
+                      style={{ color: VERDICT_STYLES[verdict].hue }}
+                    >
+                      {completions}
+                    </span>
+                    <span className="font-display-hero text-[22px] leading-none text-label-tertiary">
+                      /{outOf}
+                    </span>
+                    <span className="font-data ml-1 text-label-tertiary">days</span>
                   </div>
-                  <p className="max-w-[34ch] text-body leading-relaxed opacity-85">{sentence}</p>
+                  <p className="max-w-[34ch] text-body leading-relaxed text-label-secondary">{sentence}</p>
                 </button>
               </motion.li>
             ))}

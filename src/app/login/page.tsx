@@ -119,7 +119,7 @@ export default function LoginPage() {
                 mode === m ? 'bg-white text-black' : 'bg-bg-tertiary text-label-secondary',
               )}
             >
-              {m === 'signIn' ? 'Sign in' : 'Create account'}
+              {m === 'signIn' ? 'Sign In' : 'Create Account'}
             </button>
           ))}
         </div>
@@ -134,7 +134,7 @@ export default function LoginPage() {
               className="overflow-hidden"
             >
               <label htmlFor="name" className="font-data mb-2 block text-label-tertiary">
-                Your name
+                Your Name
               </label>
               <input
                 id="name"
@@ -194,7 +194,7 @@ export default function LoginPage() {
         )}
 
         <Button fullWidth loading={busy} onClick={submit} className="mt-2">
-          {mode === 'signIn' ? 'Sign in' : 'Create account'}
+          {mode === 'signIn' ? 'Sign In' : 'Create Account'}
         </Button>
       </section>
     </main>

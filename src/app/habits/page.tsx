@@ -81,7 +81,7 @@ function HabitsScreen() {
     <Screen>
       <PageFade>
         <ScreenHeader
-          title={view === 'habits' ? 'Your habits' : 'Habit chains'}
+          title={view === 'habits' ? 'Your Habits' : 'Habit Chains'}
           eyebrow={
             status === 'loading'
               ? undefined

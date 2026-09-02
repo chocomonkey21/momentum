@@ -8,12 +8,16 @@
  */
 
 export const palette = {
-  /* Warm data ramp — bottom-to-top order of the stacked momentum chart. */
-  amber: '#FFC400',
-  orange: '#FF7A00',
-  vermillion: '#FF3D00',
+  /* Data hues. Vermillion / amber / magenta are from the arch-chart
+     reference, blue and green from the pill reference. Plum is a FILL-ONLY
+     hue (1.97:1 on black) — onboarding tiles and avatars, never a habit. */
+  amber: '#FFB627',
+  vermillion: '#F4532B',
+  plum: '#7A0F3F',
+  magenta: '#FF2FB3',
   blue: '#0B6BFF',
-  cyan: '#4FC9F0',
+  /* Status only — never assigned to a habit. */
+  orange: '#FF7A00',
 
   green: '#34D058',
   crimson: '#FF2D55',
@@ -56,7 +60,7 @@ export const semantic = {
  * calendar and contribution grids to stay readable. Assigned round-robin at
  * creation and stable across every screen.
  */
-export const CHART_COLORS = ['amber', 'orange', 'vermillion', 'blue', 'cyan'] as const;
+export const CHART_COLORS = ['vermillion', 'amber', 'magenta', 'blue', 'green'] as const;
 export type ChartColor = (typeof CHART_COLORS)[number];
 
 /**
@@ -67,13 +71,16 @@ export type ChartColor = (typeof CHART_COLORS)[number];
  * hue instead of rendering `undefined` and losing its colour entirely.
  */
 const LEGACY_COLOR_ALIASES: Record<string, ChartColor> = {
-  green: 'amber',
-  pink: 'vermillion',
+  pink: 'magenta',
   red: 'vermillion',
   yellow: 'amber',
-  // Violet was dropped from the palette in v4 — it is the single most generic
-  // 'AI-generated app' accent, and the brief forbids it outright.
-  purple: 'cyan',
+  // Orange and cyan left the data set in v5; they map to the two hues that
+  // keep a five-habit account visibly distinct.
+  orange: 'magenta',
+  cyan: 'green',
+  plum: 'magenta',
+  // Violet was dropped in v4 — the single most generic 'AI app' accent.
+  purple: 'magenta',
 };
 
 export function normalizeChartColor(c: string): ChartColor {
@@ -88,8 +95,8 @@ export function chartHex(c: ChartColor): string {
 /** Text colour that stays legible on a solid fill of the given habit hue. */
 export function onChartHex(c: ChartColor): string {
   const n = normalizeChartColor(c);
-  // Black text everywhere except blue: white on vermillion is only 3.6:1,
-  // black on it is 5.9:1. Blue is the one hue that needs white (4.6:1).
+  // Blue takes white (4.6:1); the light hues take black (amber 12:1,
+  // vermillion 6.1:1, magenta 6.3:1, green 10.3:1).
   return n === 'blue' ? palette.white : palette.ink0;
 }
 
@@ -163,13 +170,13 @@ export const NAV = {
  * the curated set, so "Fitness" is the same amber everywhere it appears.
  */
 const CATEGORY_HUES: Record<string, ChartColor> = {
-  Fitness: 'amber',
-  Study: 'orange',
-  Health: 'vermillion',
-  Creativity: 'blue',
-  Mind: 'cyan',
+  Fitness: 'vermillion',
+  Study: 'blue',
+  Health: 'amber',
+  Creativity: 'magenta',
+  Mind: 'green',
   Lifestyle: 'amber',
-  Work: 'orange',
+  Work: 'blue',
 };
 export function categoryHue(name: string | null | undefined): ChartColor {
   if (!name) return 'blue';

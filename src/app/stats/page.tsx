@@ -11,7 +11,7 @@ import { MomentumChart } from '@/components/chart/MomentumChart';
 import { InsightCard } from '@/components/habit/InsightCard';
 import { aggregateInsight, MIN_LOGS_FOR_INSIGHT } from '@/lib/insights';
 import { momentumBand } from '@/lib/momentum';
-import { chartHex, onChartHex, semantic, palette } from '@/theme/theme';
+import { chartHex, semantic, palette } from '@/theme/theme';
 import { Stat } from '@/components/ui/Stat';
 
 type Range = 'week' | 'year';
@@ -46,7 +46,7 @@ export default function StatsPage() {
   if (status === 'error') {
     return (
       <Screen width="wide">
-        <ScreenHeader title="Your progress" />
+        <ScreenHeader title="Your Progress" />
         <ErrorState message={errorMessage ?? 'Something went wrong.'} onRetry={retry} />
       </Screen>
     );
@@ -55,7 +55,7 @@ export default function StatsPage() {
   return (
     <Screen width="wide">
       <PageFade>
-        <ScreenHeader title="Your progress" eyebrow="Statistics" />
+        <ScreenHeader title="Your Progress" eyebrow="Statistics" />
 
         {status === 'loading' ? (
           <div className="flex flex-col gap-6">
@@ -104,7 +104,7 @@ export default function StatsPage() {
                 />
               </div>
 
-              <section className="rounded-[var(--radius-card)] bg-bg-secondary p-4 pt-5">
+              <section className="rounded-[var(--radius-card)] bg-bg-secondary p-5">
                 <MomentumChart habits={habits} days={days} />
               </section>
             </div>
@@ -112,7 +112,7 @@ export default function StatsPage() {
             {/* --- Sidebar column: per-habit rows + insight --- */}
             <div className="flex flex-col gap-4">
               <section>
-                <h2 className="font-display mb-3 text-title2">By habit</h2>
+                <h2 className="font-display mb-3 text-title2">By Habit</h2>
                 <ul className="flex flex-col gap-2">
                   {habits.map((h) => (
                     <li key={h.id}>
@@ -129,18 +129,17 @@ export default function StatsPage() {
                       >
                         {/* Solid chip in the habit's own hue — same colour it
                             carries in the chart, on its card, in its grid. */}
+                        {/* Outlined ring in the habit's hue; numeral in the same hue. */}
                         <span
                           aria-hidden
-                          className="inline-flex size-8 shrink-0 items-center justify-center rounded-[10px] font-display text-[13px]"
-                          style={{
-                            backgroundColor: chartHex(h.chartColor),
-                            color: onChartHex(h.chartColor),
-                          }}
-                        >
-                          {h.name.charAt(0).toUpperCase()}
-                        </span>
+                          className="size-4 shrink-0 rounded-[var(--radius-pill)] border-2"
+                          style={{ borderColor: chartHex(h.chartColor) }}
+                        />
                         <span className="min-w-0 flex-1 truncate text-subheadline">{h.name}</span>
-                        <span className="font-display-hero text-[24px] leading-none">
+                        <span
+                          className="font-display-hero text-[24px] leading-none"
+                          style={{ color: chartHex(h.chartColor) }}
+                        >
                           {Math.round(h.momentumScore)}
                         </span>
                         <ChevronRight size={16} className="text-label-tertiary" aria-hidden />

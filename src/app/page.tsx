@@ -120,7 +120,7 @@ export default function HomePage() {
                     {total === 0
                       ? 'Nothing scheduled today'
                       : allDone
-                        ? 'Every habit done. A full day.'
+                        ? 'Every habit done today.'
                         : `${total - done} still to go`}
                   </p>
                   {total > 0 && (
@@ -157,16 +157,22 @@ export default function HomePage() {
                 </p>
                 <p className="mt-2 text-footnote text-white">across {habits.length} habits</p>
               </button>
+              {/* Outlined, so the two tiles read as a pair without being twins. */}
               <div
-                className="rounded-[var(--radius-card)] p-5"
-                style={{ backgroundColor: palette.amber }}
+                className="rounded-[var(--radius-card)] border-2 p-5"
+                style={{ borderColor: palette.amber }}
               >
-                <p className="font-data text-black/60">Best streak</p>
-                <p className="font-display-hero mt-3 flex items-center gap-2 text-[44px] leading-none text-black">
-                  {loading ? '—' : bestStreak}
-                  <Flame size={22} className="text-black/70" aria-hidden />
+                <p className="font-data" style={{ color: palette.amber }}>
+                  Best Streak
                 </p>
-                <p className="mt-2 text-footnote text-black/60">
+                <p
+                  className="font-display-hero mt-3 flex items-center gap-2 text-[44px] leading-none"
+                  style={{ color: palette.amber }}
+                >
+                  {loading ? '—' : bestStreak}
+                  <Flame size={22} aria-hidden />
+                </p>
+                <p className="mt-2 text-footnote text-label-secondary">
                   {bestStreak === 1 ? 'day running' : 'days running'}
                 </p>
               </div>
@@ -178,7 +184,7 @@ export default function HomePage() {
             >
               <span className="flex-1">
                 <span className="font-data block text-label-tertiary">This week</span>
-                <span className="mt-1 block text-headline font-medium">Your recap is ready</span>
+                <span className="mt-1 block text-headline font-medium">Your weekly recap is ready</span>
               </span>
               <span className="inline-flex size-9 items-center justify-center rounded-[var(--radius-pill)] bg-white text-black">
                 <ArrowRight size={16} aria-hidden />
@@ -195,7 +201,7 @@ export default function HomePage() {
                   message={
                     habits.length === 0
                       ? "No habits yet. Momentum starts with one — it doesn't have to be a big one."
-                      : 'Nothing scheduled for today. Enjoy the gap.'
+                      : 'Nothing scheduled for today.'
                   }
                   actionLabel={habits.length === 0 ? 'Add your first habit' : undefined}
                   onAction={habits.length === 0 ? () => setAddOpen(true) : undefined}

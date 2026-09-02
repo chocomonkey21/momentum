@@ -68,7 +68,7 @@ export function ChainBuilder({
       <div className="flex flex-col gap-6">
         <div>
           <label htmlFor="chain-name" className="font-data mb-2 block text-label-tertiary">
-            Chain name
+            Chain Name
           </label>
           <input
             id="chain-name"
@@ -183,7 +183,7 @@ function ChainRow({
     >
       <span
         aria-hidden
-        className="size-8 shrink-0 rounded-[10px]"
+        className="size-8 shrink-0 rounded-[var(--radius-pill)]"
         style={{ backgroundColor: color }}
       />
       <span className="min-w-0 flex-1 truncate text-body font-medium">{name}</span>

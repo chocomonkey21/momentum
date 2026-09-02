@@ -76,7 +76,7 @@ export default function SettingsPage() {
             )}
           >
             <span>
-              <span className="block text-body font-medium">Daily reminders</span>
+              <span className="block text-body font-medium">Daily Reminders</span>
               <span className="block text-footnote text-label-secondary">
                 A nudge in this browser while the app is open
               </span>
@@ -106,7 +106,7 @@ export default function SettingsPage() {
           {notificationsEnabled && !blocked && (
             <div className="mt-3 rounded-[var(--radius-card)] bg-bg-secondary px-5 py-4">
               <label htmlFor="reminder-time" className="block text-body font-medium">
-                Reminder time
+                Reminder Time
               </label>
               <p className="mb-3 text-footnote text-label-secondary">
                 Time-constrained habits remind you 30 minutes before their deadline instead.
@@ -129,7 +129,7 @@ export default function SettingsPage() {
           <h2 className="font-display mb-3 text-title2">Account</h2>
           <div className="rounded-[var(--radius-card)] bg-bg-secondary px-5 py-4">
             <label htmlFor="display-name" className="font-data mb-2 block text-label-tertiary">
-              Display name
+              Display Name
             </label>
             <div className="flex items-center gap-3">
               <input
@@ -180,7 +180,7 @@ export default function SettingsPage() {
             <div className="mt-4">
               <Button variant="secondary" onClick={() => setConfirmSignOut(true)}>
                 <LogOut size={16} aria-hidden />
-                Log out
+                Log Out
               </Button>
             </div>
           </div>
@@ -205,9 +205,9 @@ export default function SettingsPage() {
       <ConfirmDialog
         open={confirmSignOut}
         onOpenChange={setConfirmSignOut}
-        title="Log out?"
+        title="Log Out?"
         body="Your habits stay safely on your account — signing back in brings everything back."
-        confirmLabel="Log out"
+        confirmLabel="Log Out"
         onConfirm={async () => {
           setConfirmSignOut(false);
           await signOut();

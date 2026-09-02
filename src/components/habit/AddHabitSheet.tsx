@@ -131,7 +131,7 @@ export function AddHabitSheet({
       <div className="flex flex-col gap-6">
         <div>
           <label htmlFor="habit-name" className="font-data mb-2 block text-label-tertiary">
-            Habit name
+            Habit Name
           </label>
           <input
             ref={nameRef}
@@ -211,17 +211,15 @@ export function AddHabitSheet({
                 whileTap={reduce ? { opacity: 0.7 } : { scale: 0.96 }}
                 transition={reduce ? reducedFade : spring.default}
                 className={cn(
-                  'inline-flex min-h-[44px] items-center gap-2 rounded-[var(--radius-pill)] px-4',
+                  'inline-flex min-h-[44px] items-center gap-2 rounded-[var(--radius-pill)] border-2 px-4',
                   'font-display text-[15px] uppercase tracking-[0.04em] transition-colors',
-                  !on && 'bg-bg-tertiary text-label-secondary hover:text-label-primary',
                 )}
-                style={on ? { backgroundColor: chartHex(hue), color: onChartHex(hue) } : undefined}
+                style={
+                  on
+                    ? { backgroundColor: chartHex(hue), borderColor: chartHex(hue), color: onChartHex(hue) }
+                    : { borderColor: chartHex(hue), color: chartHex(hue) }
+                }
               >
-                <span
-                  aria-hidden
-                  className="size-2.5 rounded-full"
-                  style={{ backgroundColor: on ? 'currentColor' : chartHex(hue) }}
-                />
                 {c}
               </motion.button>
             );
@@ -232,7 +230,7 @@ export function AddHabitSheet({
         <div>
           <label className="flex min-h-[44px] cursor-pointer items-center justify-between gap-4">
             <span>
-              <span className="block text-body text-label-primary">Time constraint</span>
+              <span className="block text-body text-label-primary">Time Constraint</span>
               <span className="block text-footnote text-label-secondary">
                 Block logging after a deadline each day
               </span>

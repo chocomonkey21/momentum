@@ -1,26 +1,29 @@
 'use client';
 
 import { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
-import { chartHex, palette, semantic } from '@/theme/theme';
+import { palette, semantic } from '@/theme/theme';
 import { momentumSeries } from '@/lib/momentum';
 import { dayKeyRange, toDayKey } from '@/lib/dates';
 import type { HabitView } from '@/context/AppContext';
 
 /**
- * Stacked Momentum Chart.
+ * Momentum Chart — arch bars.
  *
- * Replaces the earlier overlapping area chart with the stacked-bar treatment
- * from the design reference: one thin bar per day, segmented by habit, warm
- * ramp climbing from amber at the base to vermillion at the top.
+ * One bar per period, each the MEAN momentum across all active habits for
+ * that period, drawn as a solid column with a fully rounded top. The value
+ * is printed directly on the bar in black — the reference's tone-on-tone
+ * numeral is 1.96:1 and unreadable at this size; amber marks the current
+ * period instead. No axes, no
+ * legend, no stacking — the previous stacked-segment chart put five hues in
+ * every bar and was unreadable at phone width.
  *
- * A note on the semantics, because stacking is easy to get wrong: each segment
- * is that habit's own momentum for that day, so the segments are independent —
- * stacking them is a legitimate *sum* ("total momentum across all habits"), not
- * a proportion. The Y axis is therefore 0 to 100 x habitCount. Each habit's
- * segment height still equals the number on its own card, so the chart can
- * never disagree with the rows beside it (user-flows.md §10).
+ * Week view: 7 daily bars. Year view: 12 monthly bars (mean of that month's
+ * daily means), which keeps the columns wide enough to carry a numeral.
+ *
+ * The numbers here come from the same `momentumSeries` replay the habit
+ * cards use, so the chart can never disagree with the rows beside it
+ * (user-flows.md §10). Aggregation is display-only.
  */
 export function MomentumChart({ habits, days }: { habits: HabitView[]; days: number }) {
   const dayKeys = useMemo(() => {
@@ -30,115 +33,108 @@ export function MomentumChart({ habits, days }: { habits: HabitView[]; days: num
     return dayKeyRange(toDayKey(start), toDayKey(end));
   }, [days]);
 
-  const data = useMemo(() => {
-    const series = habits.map((h) => ({ habit: h, values: momentumSeries(h.logs, dayKeys) }));
+  // Per-day mean across habits (null days from the replay count as 0).
+  const daily = useMemo(() => {
+    const series = habits.map((h) => momentumSeries(h.logs, dayKeys));
     return dayKeys.map((key, i) => {
-      const row: Record<string, string | number> = { date: key };
-      for (const s of series) row[`h${s.habit.id}`] = s.values[i] ?? 0;
-      return row;
+      const vals = series.map((s) => s[i] ?? 0);
+      const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+      return { key, value: Math.round(mean) };
     });
   }, [habits, dayKeys]);
 
-  const ceiling = Math.max(100, habits.length * 100);
+  const bars = useMemo(() => {
+    if (days <= 14) {
+      return daily.map((d) => ({
+        id: d.key,
+        label: format(new Date(d.key + 'T00:00:00'), 'EEEEE'),
+        long: format(new Date(d.key + 'T00:00:00'), 'EEEE d MMMM'),
+        value: d.value,
+      }));
+    }
+    // Group by month, oldest first; twelve buckets for a year.
+    const buckets = new Map<string, { sum: number; n: number; first: string }>();
+    for (const d of daily) {
+      const m = d.key.slice(0, 7);
+      const b = buckets.get(m) ?? { sum: 0, n: 0, first: d.key };
+      b.sum += d.value;
+      b.n += 1;
+      buckets.set(m, b);
+    }
+    return [...buckets.entries()].map(([m, b]) => ({
+      id: m,
+      label: format(new Date(b.first + 'T00:00:00'), 'MMMMM'),
+      long: format(new Date(b.first + 'T00:00:00'), 'MMMM yyyy'),
+      value: Math.round(b.sum / b.n),
+    }));
+  }, [daily, days]);
 
-  const summary = useMemo(() => {
-    if (habits.length === 0) return 'Momentum chart, no habits yet.';
-    const best = habits.reduce((a, b) => (b.momentumScore > a.momentumScore ? b : a));
-    return `Stacked momentum chart over the last ${days} days, ${habits.length} habits. Highest is ${
-      best.name
-    } at ${Math.round(best.momentumScore)} out of 100.`;
-  }, [habits, days]);
+  const last = bars.length - 1;
+  const best = bars.reduce((a, b) => (b.value > a.value ? b : a), bars[0] ?? { value: 0, long: '' });
+
+  const summary =
+    habits.length === 0
+      ? 'Momentum chart, no habits yet.'
+      : `Average momentum over the last ${days} days across ${habits.length} habits. Highest was ${
+          best.value
+        } on ${best.long}; now ${bars[last]?.value ?? 0}.`;
+
+  // Wide enough for a numeral on every bar in week view; year view keeps the
+  // numeral only on the current bar, and every bar still carries a title.
+  const showAll = bars.length <= 8;
 
   return (
     <div>
-      {/* Legend: a solid swatch per habit, in the same hue as its bar. */}
-      <ul className="mb-4 flex flex-wrap gap-x-5 gap-y-2">
-        {habits.map((h) => (
-          <li key={h.id} className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="size-2.5 rounded-[3px]"
-              style={{ backgroundColor: chartHex(h.chartColor) }}
-            />
-            <span className="font-data text-[10px] text-label-secondary">{h.name}</span>
+      <div role="img" aria-label={summary} className="flex h-56 items-end gap-2">
+        {bars.map((b, i) => {
+          const current = i === last;
+          const fill = current ? palette.amber : palette.vermillion;
+          const ink = palette.ink0;
+          // Every bar keeps at least a full arch of height so a 0 still
+          // reads as a shape, not a gap.
+          const heightPct = Math.max(14, (b.value / 100) * 100);
+          return (
+            <div key={b.id} className="flex h-full min-w-0 flex-1 flex-col justify-end" title={`${b.long}: ${b.value}`}>
+              <div
+                className="relative flex w-full items-start justify-center rounded-t-[var(--radius-pill)] pt-3 transition-[height] duration-500 ease-out"
+                style={{ height: `${heightPct}%`, backgroundColor: fill }}
+              >
+                {(showAll || current) && (
+                  <span
+                    className="font-display-hero leading-none"
+                    style={{ color: ink, fontSize: showAll ? 18 : 14 }}
+                  >
+                    {b.value}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Baseline + period labels, directly under each bar. */}
+      <div className="mt-2 flex gap-2 border-t pt-2" style={{ borderColor: semantic.separator }}>
+        {bars.map((b, i) => (
+          <span
+            key={b.id}
+            aria-hidden
+            className="font-data flex-1 text-center"
+            style={{ color: i === last ? palette.amber : semantic.labelTertiary }}
+          >
+            {b.label}
+          </span>
+        ))}
+      </div>
+
+      {/* The chart is an image for assistive tech; the values live here too. */}
+      <ul className="sr-only">
+        {bars.map((b) => (
+          <li key={b.id}>
+            {b.long}: {b.value}
           </li>
         ))}
       </ul>
-
-      <div role="img" aria-label={summary} className="h-56 w-full sm:h-72">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }} barCategoryGap="18%">
-            <CartesianGrid stroke={palette.ink3} vertical={false} />
-            <XAxis
-              dataKey="date"
-              tickFormatter={(v: string) =>
-                days <= 14
-                  ? format(new Date(v + 'T00:00:00'), 'd')
-                  : format(new Date(v + 'T00:00:00'), 'd MMM')
-              }
-              tick={{
-                fill: semantic.labelTertiary,
-                fontSize: 10,
-                fontFamily: 'var(--font-mono)',
-                letterSpacing: 0.5,
-              }}
-              axisLine={false}
-              tickLine={false}
-              minTickGap={days <= 14 ? 4 : 24}
-            />
-            <YAxis
-              domain={[0, ceiling]}
-              ticks={[0, ceiling / 2, ceiling]}
-              tick={{
-                fill: semantic.labelTertiary,
-                fontSize: 10,
-                fontFamily: 'var(--font-mono)',
-              }}
-              axisLine={false}
-              tickLine={false}
-              width={34}
-            />
-            <Tooltip
-              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-              contentStyle={{
-                backgroundColor: semantic.bgElevated,
-                border: `1px solid ${semantic.separator}`,
-                borderRadius: 14,
-                fontSize: 12,
-                fontFamily: 'var(--font-sans)',
-              }}
-              labelStyle={{
-                color: semantic.labelSecondary,
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-              }}
-              labelFormatter={(v) => format(new Date(String(v) + 'T00:00:00'), 'EEE d MMM')}
-              formatter={(value, name) => {
-                const key = String(name);
-                const habit = habits.find((h) => `h${h.id}` === key);
-                return [Math.round(Number(value ?? 0)), habit?.name ?? key];
-              }}
-            />
-
-            {/* Rendered in palette order, so amber sits at the base of the stack
-                and the warm ramp climbs through flat, solid segments. */}
-            {habits.map((h, i) => (
-              <Bar
-                key={h.id}
-                dataKey={`h${h.id}`}
-                stackId="momentum"
-                fill={chartHex(h.chartColor)}
-                // Only the topmost segment gets rounded shoulders.
-                radius={i === habits.length - 1 ? [3, 3, 0, 0] : undefined}
-                isAnimationActive
-                animationDuration={450}
-              />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
     </div>
   );
 }

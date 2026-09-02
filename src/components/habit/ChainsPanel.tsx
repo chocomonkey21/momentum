@@ -95,10 +95,13 @@ export function ChainsPanel({
                   // bouncy spring — one of the few earned bounces in the app.
                   animate={{ scale: complete && !reduce ? [0.97, 1] : 1 }}
                   transition={reduce ? { duration: 0.15 } : spring.bouncy}
-                  className="group rounded-[var(--radius-card)] p-5 transition-colors"
+                  // Complete = outlined in green with a filled check ring;
+                  // in progress = neutral surface. Same rhythm as habit cards.
+                  className="group rounded-[var(--radius-card)] border-2 p-5 transition-colors"
                   style={{
-                    backgroundColor: complete ? semantic.positive : semantic.bgSecondary,
-                    color: complete ? palette.ink0 : palette.white,
+                    backgroundColor: complete ? palette.ink0 : semantic.bgSecondary,
+                    borderColor: complete ? semantic.positive : 'transparent',
+                    color: palette.white,
                   }}
                 >
                   <div className="mb-5 flex items-start justify-between gap-3">
@@ -111,10 +114,17 @@ export function ChainsPanel({
                       <p className="font-display truncate text-[22px] leading-tight">{chain.chainName}</p>
                       {/* Stat pattern: done / total, then the label. */}
                       <div className="mt-3 flex items-baseline gap-1">
-                        <span className="font-display-hero text-[40px] leading-none">{done}</span>
-                        <span className="font-display-hero text-[20px] leading-none opacity-50">/{total}</span>
+                        <span
+                          className="font-display-hero text-[40px] leading-none"
+                          style={{ color: complete ? semantic.positive : palette.white }}
+                        >
+                          {done}
+                        </span>
+                        <span className="font-display-hero text-[20px] leading-none text-label-tertiary">
+                          /{total}
+                        </span>
                       </div>
-                      <p className="font-data mt-2 opacity-70">
+                      <p className="font-data mt-2 text-label-tertiary">
                         {total === 0 ? 'No habits yet' : complete ? 'Complete for today' : 'Complete today'}
                       </p>
                     </button>
@@ -122,7 +132,8 @@ export function ChainsPanel({
                     <div className="flex items-center gap-2">
                       {complete && (
                         <span
-                          className="inline-flex size-9 items-center justify-center rounded-[var(--radius-pill)] bg-black/15"
+                          className="inline-flex size-9 items-center justify-center rounded-[var(--radius-pill)] text-black"
+                          style={{ backgroundColor: semantic.positive }}
                           aria-hidden
                         >
                           <Check size={18} strokeWidth={3} />
@@ -132,7 +143,7 @@ export function ChainsPanel({
                           the grouping, not any habit or log (user-flows.md §8). */}
                       <IconButton
                         label={`Delete chain ${chain.chainName}`}
-                        className="text-current opacity-0 transition-opacity hover:bg-black/10 focus-visible:opacity-100 group-hover:opacity-100"
+                        className="opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
                         onClick={async () => {
                           if (!chain.id) return;
                           const name = chain.chainName;
@@ -158,25 +169,30 @@ export function ChainsPanel({
                         <li key={habit.id} className="flex items-center gap-2">
                           <span
                             className={cn(
-                              'inline-flex min-h-[36px] items-center gap-2 rounded-[var(--radius-pill)] px-3',
+                              'inline-flex min-h-[36px] items-center gap-2 rounded-[var(--radius-pill)] border-2 px-3',
                               'text-footnote font-medium transition-colors',
                             )}
+                            // Done members are filled pills in their hue; the
+                            // rest are outlined rings — the reference's rhythm.
                             style={
                               isDone
-                                ? complete
-                                  ? { backgroundColor: 'rgba(0,0,0,0.15)', color: palette.ink0 }
-                                  : {
-                                      backgroundColor: chartHex(habit.chartColor),
-                                      color: onChartHex(habit.chartColor),
-                                    }
-                                : { backgroundColor: semantic.bgTertiary, color: palette.white }
+                                ? {
+                                    backgroundColor: chartHex(habit.chartColor),
+                                    borderColor: chartHex(habit.chartColor),
+                                    color: onChartHex(habit.chartColor),
+                                  }
+                                : {
+                                    backgroundColor: 'transparent',
+                                    borderColor: palette.ink5,
+                                    color: palette.white,
+                                  }
                             }
                           >
                             {isDone && <Check size={12} strokeWidth={3} aria-hidden />}
                             {habit.name}
                           </span>
                           {i < members.length - 1 && (
-                            <ArrowRight size={14} className="opacity-50" aria-hidden />
+                            <ArrowRight size={14} className="text-label-tertiary" aria-hidden />
                           )}
                         </li>
                       );

@@ -136,7 +136,7 @@ export default function OnboardingPage() {
               </div>
 
               <div className="relative">
-                <p className="font-data text-black/60">Habit tracker</p>
+                <p className="font-data text-black/60">Habit Tracker</p>
                 <h1 className="font-wordmark mt-3 leading-none">MOMENTUM</h1>
                 <p className="mt-4 max-w-[26ch] text-body leading-relaxed text-black/75">
                   Build better days. Miss one and your progress dips — it doesn&rsquo;t disappear.
@@ -170,9 +170,9 @@ export default function OnboardingPage() {
           >
             <p className="font-data text-label-tertiary">Step 2</p>
             <h1 className="font-display mt-2 text-[40px] leading-[0.98]">
-              What do you
+              What Do You
               <br />
-              want to improve?
+              Want to Improve?
             </h1>
             <p className="mt-4 max-w-[34ch] text-body leading-relaxed text-label-secondary">
               Pick any that apply, or skip — this only orders the suggestions next.
@@ -237,9 +237,9 @@ export default function OnboardingPage() {
           >
             <p className="font-data text-label-tertiary">Step 3</p>
             <h1 className="font-display mt-2 text-[40px] leading-[0.98]">
-              Pick your
+              Pick Your
               <br />
-              first habits
+              First Habits
             </h1>
             <p className="mt-4 max-w-[34ch] text-body leading-relaxed text-label-secondary">
               Start small. You can add more any time.
@@ -304,7 +304,7 @@ export default function OnboardingPage() {
       <div className="sticky bottom-0 mt-6 bg-bg-primary pb-2 pt-4">
         {step < 2 ? (
           <Button fullWidth onClick={() => setStep(step + 1)}>
-            {step === 0 ? "Let's go" : categories.length === 0 ? 'Skip' : 'Continue'}
+            {step === 0 ? "Let's Go" : categories.length === 0 ? 'Skip' : 'Continue'}
           </Button>
         ) : (
           <>
@@ -316,8 +316,8 @@ export default function OnboardingPage() {
               onClick={startTracking}
             >
               {picked.length === 0
-                ? 'Start tracking'
-                : `Start with ${picked.length} habit${picked.length === 1 ? '' : 's'}`}
+                ? 'Start Tracking'
+                : `Start With ${picked.length} Habit${picked.length === 1 ? '' : 's'}`}
             </Button>
             {picked.length === 0 && (
               <p className="mt-3 text-footnote text-label-secondary">

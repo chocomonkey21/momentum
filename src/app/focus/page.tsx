@@ -250,7 +250,7 @@ export default function FocusPage() {
             {linkedHabit && (
               <span
                 aria-hidden
-                className="size-6 rounded-[8px]"
+                className="size-6 rounded-[var(--radius-pill)]"
                 style={{ backgroundColor: chartHex(linkedHabit.chartColor) }}
               />
             )}
@@ -265,7 +265,7 @@ export default function FocusPage() {
         </section>
 
         <section className="mt-10">
-          <h2 className="font-display mb-3 text-title2">Today&rsquo;s sessions</h2>
+          <h2 className="font-display mb-3 text-title2">Today&rsquo;s Sessions</h2>
           {todaySessions.length === 0 ? (
             <p className="rounded-[var(--radius-card)] bg-bg-secondary px-5 py-6 text-body text-label-secondary">
               No focus sessions yet today.
@@ -305,7 +305,7 @@ export default function FocusPage() {
       <Sheet
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        title="Link to a habit"
+        title="Link to a Habit"
         description="Records this session against a habit. It won't mark it complete."
       >
         <div className="flex flex-col gap-2">
@@ -331,7 +331,7 @@ export default function FocusPage() {
             >
               <span
                 aria-hidden
-                className="size-8 rounded-[10px]"
+                className="size-8 rounded-[var(--radius-pill)]"
                 style={{ backgroundColor: chartHex(h.chartColor) }}
               />
               {h.name}

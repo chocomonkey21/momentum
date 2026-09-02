@@ -12,11 +12,13 @@
   /* --- Primitives -------------------------------------------------- */
   /* Warm data ramp, then two cool accents. Fully saturated — these are
      meant to be used as whole-card fills, not as tints. */
-  --color-app-amber: #ffc400;
-  --color-app-orange: #ff7a00;
-  --color-app-vermillion: #ff3d00;
+  --color-app-amber: #ffb627;
+  --color-app-vermillion: #f4532b;
+  --color-app-plum: #7a0f3f;
+  --color-app-magenta: #ff2fb3;
   --color-app-blue: #0b6bff;
-  --color-app-cyan: #4fc9f0;
+  /* Warning keeps its own orange; it is a status, not a data hue. */
+  --color-app-orange: #ff7a00;
 
   --color-app-green: #34d058;
   --color-app-crimson: #ff2d55;

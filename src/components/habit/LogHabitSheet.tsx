@@ -87,7 +87,7 @@ export function LogHabitSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={habit.name} description="Log today">
+    <Sheet open={open} onOpenChange={onOpenChange} title={habit.name} description="Log Today">
       <div className="flex flex-col gap-6">
         {/* Completed / Skipped — the primary decision, two large buttons. */}
         <div className="grid grid-cols-2 gap-3">
