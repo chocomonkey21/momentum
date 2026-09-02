@@ -43,7 +43,7 @@ Non-negotiable, from `design-system.md` §0 — restated here because they get v
 
 - **One tint color means "actionable."** `color.tint` (system blue) is for things the user can tap. Never apply it decoratively.
 - **Red is destructive/error only.** Never use `color.destructive` for a neutral stat, empty state, or "0% today" — that was a real bug in an earlier build. Zero is neutral, not an error.
-- **Four type faces, each with one job** (`design-system.md` §2.2): Righteous for the splash wordmark, Anton for hero numerals, Roboto Condensed Bold for titles, Roboto Condensed Light for body and metadata. The *scoping principle* is unchanged and still matters: **the display faces never appear on a list row or in body copy.**
+- **Three type faces, each with one job** (`design-system.md` §2.2, revised in v4 — Roboto Condensed is gone, replaced by Space Grotesk at two weights): Righteous for the splash wordmark, Anton for hero numerals, Space Grotesk Bold for titles/headlines/buttons and Space Grotesk Regular for body and metadata. The *scoping principle* is unchanged and still matters: **the display faces (Righteous, Anton) never appear on a list row or in body copy.**
 - **The app is a fixed 440px phone-width column at every viewport** (`design-system.md` §3). This reverses the earlier responsive requirement, at the client's request. There is no sidebar and no multi-column layout; every screen stacks.
 
 ---
@@ -72,7 +72,7 @@ Non-negotiable, from `design-system.md` §0 — restated here because they get v
 - **`design-system.md` is authoritative for every color, type size, spacing value, radius, and motion config.** If a value you need isn't in that file, don't invent one — pick the nearest token and flag the gap rather than adding a new raw value.
 - **Every screen must be checked against `design-system.md` §3 (Layout) for all three breakpoints (mobile/tablet/desktop) before being considered done.**
 - **Icons are `lucide-react` only.** Do not pull in a second icon library or custom icon fonts alongside it — one icon system, per `design-system.md` §6.
-- **Data-visualization color (per-habit hues in charts/calendars) uses only the curated set** in `design-system.md` §1 (blue/green/orange/purple/pink) — don't generate arbitrary colors per habit.
+- **Data-visualization color (per-habit hues in charts/calendars) uses only the curated set** in `design-system.md` §1 — as of v4: vermillion/amber/magenta/blue/green. `plum` is fill-only and never assigned to a habit; `orange` is `color.warning`, not a data hue. Don't generate arbitrary colors per habit.
 
 ---
 

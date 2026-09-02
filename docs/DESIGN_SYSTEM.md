@@ -1,16 +1,31 @@
-# Momentum — Design System v3 (as built)
+# Momentum — Design System v4 (as built)
 
-> **v3 records the shipped visual direction, which diverges from v1/v2 in four
-> deliberate ways** — all client-directed, with visual references:
+> **v4 is a from-feedback design pass on top of v3** — three rounds of client
+> review, each addressing a concrete complaint: too many solid colour blocks
+> with no distinction between sections, an unreadable stacked chart, boring
+> type, a login screen with nothing of its own. v3's four-face type system
+> and warm-only ramp are both superseded here.
 >
-> | Area | v1/v2 said | v3 ships |
+> | Area | v3 shipped | v4 ships |
 > |---|---|---|
-> | Type | One condensed/impact face, scoped to 3 moments | **Four faces**: Righteous (wordmark), Anton (hero numerals), Roboto Condensed Bold/Light (everything else) — §2 |
-> | Colour | Apple system palette, one disciplined tint | **Bolder warm ramp**, colour-blocked cards and filled stat tiles — §1 |
-> | Layout | Responsive; desktop sidebar + multi-column | **One 440px phone-width column at every viewport** — §3 |
-> | Chart | Overlapping translucent area bands | **Stacked bars**, warm ramp — §8 |
+> | Type | **Four faces**: Righteous, Anton, Roboto Condensed Bold/Light | **Three faces**: Righteous (wordmark), Anton (hero numerals), **Space Grotesk** Bold/Regular (everything else) — §2 |
+> | Colour | Warm ramp only: amber/orange/vermillion/blue/purple | **Vermillion/amber/magenta/blue/green**, filled-vs-outlined as the section-distinction device, not more hues — §1 |
+> | Component rhythm | Every card and tile a solid fill | **One solid hero block per screen**; everything else is an outlined ring or a neutral surface — §1.4 |
+> | Chart | Stacked bars, warm ramp, segmented per habit | **Arch bars** of mean momentum per period (7 days / 12 months), one value per bar, no stacking — §8 |
 >
-> The *principles* in §0 all survived. What changed is the expression.
+> The *principles* in §0 all survived across every version. What changed is
+> the expression. v3's own changelog against v1/v2 is preserved below.
+>
+> <details><summary>v3 vs v1/v2 (superseded by the table above)</summary>
+>
+> | Area | v1/v2 said | v3 shipped |
+> |---|---|---|
+> | Type | One condensed/impact face, scoped to 3 moments | Four faces: Righteous (wordmark), Anton (hero numerals), Roboto Condensed Bold/Light (everything else) |
+> | Colour | Apple system palette, one disciplined tint | Bolder warm ramp, colour-blocked cards and filled stat tiles |
+> | Layout | Responsive; desktop sidebar + multi-column | One 440px phone-width column at every viewport — unchanged in v4 |
+> | Chart | Overlapping translucent area bands | Stacked bars, warm ramp |
+>
+> </details>
 Apple-first design system, built from your existing black/blue UI reference and Apple's Human Interface Guidelines. **v2 note:** the target platform is now a responsive web app (see `tech-stack.md`) rather than an Expo/React Native native build — every visual token in this file is unchanged, only the underlying implementation technology is remapped where noted. This file is meant to travel with the codebase — drop it in the project root so Claude Code can read it directly as the design spec.
 
 ---
@@ -33,9 +48,32 @@ Three layers — primitive (raw values) → semantic (purpose) → component (sp
 
 ### 1.1 Primitives — as shipped
 
-**v3:** the Apple system palette was replaced with a bolder, more saturated set.
-The data-viz colours are ordered as a **warm ramp** so a typical 3–4 habit
-account renders the stacked momentum chart as a yellow-to-red gradient.
+**v4:** the warm-only ramp is gone. The five data hues now come directly from
+two client-supplied references (a flat-colour infographic and an icon-pill
+poster) — three warm, two cool, no orange or cyan in the data set. `orange`
+is demoted to status-only (`color.warning`); it never colours a habit.
+`plum` is new and **fill-only**: at 1.97:1 on black it fails as text or an
+outline, so it appears only as a solid background (onboarding tiles, avatar
+discs) and never carries a habit.
+
+| Token | Hex | Use |
+|---|---|---|
+| `vermillion` | `#F4532B` | Habit hue 1 |
+| `amber` | `#FFB627` | Habit hue 2 |
+| `magenta` | `#FF2FB3` | Habit hue 3 |
+| `blue` | `#0B6BFF` | Habit hue 4 · `color.tint` |
+| `green` | `#34D058` | Habit hue 5 · `color.positive` |
+| `plum` | `#7A0F3F` | **Fill-only** — onboarding tiles, avatar discs. Never a habit hue, never text/outline (1.97:1 on black) |
+| `orange` | `#FF7A00` | `color.warning` only — status, not data |
+| `crimson` | `#FF2D55` | `color.destructive` — error/delete only |
+| `ink0`–`ink8` | `#000000` → `#C4C4CC` | Neutral ramp. `label.secondary`/`label.tertiary` moved from ink7/ink6 to **ink8/ink7** in v4 — the old pair put tertiary text at 2.7:1 on black, below AA |
+
+Habit colours are persisted **by name**, so a palette change has to handle
+databases holding retired names — `normalizeChartColor()` maps legacy values
+(`pink`, `red`, `yellow`, `orange`, `cyan`, `purple`, `plum`, old `green`)
+onto the current five-hue set rather than rendering `undefined`.
+
+<details><summary>v3 warm-ramp palette (superseded)</summary>
 
 | Token | Hex | Use |
 |---|---|---|
@@ -46,12 +84,8 @@ account renders the stacked momentum chart as a yellow-to-red gradient.
 | `purple` | `#A855F7` | Habit 5 |
 | `green` | `#34D058` | `color.positive` |
 | `crimson` | `#FF2D55` | `color.destructive` — error/delete only |
-| `ink0`–`ink8` | `#000000` → `#C4C4CC` | Neutral ramp, higher contrast than Apple's greys |
 
-Habit colours are persisted **by name**, so a palette change has to handle
-databases holding retired names — `normalizeChartColor()` maps legacy values
-(`pink`, `red`, `yellow`, old `green`) onto the current set rather than
-rendering `undefined`.
+</details>
 
 <details><summary>v1/v2 Apple system palette (superseded)</summary>
 
@@ -88,9 +122,20 @@ These are Apple's actual shipped values — not approximations — so anything b
 
 **Fix from the audit:** the Home screen's "0%" card should use `color.bg.secondary` + `color.tint` for the ring, not a red gradient. Reserve `color.destructive` for things that are actually errors.
 
-**Exception for data visualization — widened in v3.** Per-habit colour now extends beyond charts and calendars onto the **habit cards themselves**: each card carries a low-alpha wash and hairline in its own hue, deepening once the habit is done for the day. A list of habits reads as a set of distinct blocks rather than identical grey rows, and the same hue follows the habit into its contribution grid, its calendar and its chart band.
+**Exception for data visualization — widened in v3, restructured in v4.**
+Per-habit colour extends beyond charts and calendars onto the habit cards
+themselves, but v4 changes *how*: a card is a solid fill only while it's the
+one hero block earning that treatment; otherwise the habit's hue shows as an
+**outlined ring** (done) or just the numeral (not done), never a permanent
+wash. This is the fix for "too many colours, no distinction between
+sections" — a screen gets exactly one solid block, everything else reads by
+outline or accent. §1.4 below spells out where the one block goes per screen.
+The hue still follows the habit into its contribution grid, calendar and
+chart bar.
 
-The curated set is `amber, orange, vermillion, blue, purple`, assigned round-robin at creation. (v1 named a "pink" in this list but never gave it a hex — that gap is now closed by dropping it.)
+The curated set is `vermillion, amber, magenta, blue, green`, assigned
+round-robin at creation. `plum` is deliberately excluded from this set — see
+§1.1.
 
 "One tint = actionable" still governs buttons, links and selection state.
 
@@ -109,6 +154,27 @@ tabBar.tint.inactive     = color.label.secondary
 momentumRing.track       = color.bg.tertiary
 momentumRing.fill        = color.tint  → color.positive gradient as score climbs past 70
 ```
+
+### 1.4 One solid block per screen (v4)
+
+The rule that replaced "colour everything": each screen gets **exactly one
+solid-fill hero**, chosen because it's the thing that screen is *for*. Every
+other coloured element on that screen is either an outlined ring (2px
+border, transparent or `ink0` fill) or the hue applied only to a numeral/
+label. Nesting two solid fills on one screen is the anti-pattern this section
+exists to name.
+
+| Screen | The one solid block | Everything else |
+|---|---|---|
+| Home | "Today" hero (fills amber when the day is complete) | One filled + one outlined stat tile; habit cards are rings when done |
+| Habit Detail | Hero block in the habit's own hue, ring drawn on top | Metadata chips at 18% black on the block |
+| Onboarding step 1 | Amber welcome block | — (the only screen-filling block in the whole flow) |
+| Login / Signup | Nothing — pure black canvas with the icon constellation | Tint-blue wordmark, outlined form fields |
+| Chains (complete) | The completed chain card fills green | Members are filled pills in their hue; the incomplete card stays neutral |
+| Focus | Timer block fills tint while running, green on completion | Idle state is an *outlined* ring, not a fill |
+| Recap | — (no solid fill) | Verdict cards are outlined in green/blue/orange; the outline + numeral carry the colour |
+| Friends | The one summary block (count of friends) | Leaderboard rows, status pills are outlined/neutral |
+| Profile | Identity block (amber) | Stat tiles are outlined arches; achievement badges are a single-hue list, not a rainbow grid |
 
 ---
 
@@ -132,20 +198,37 @@ All type sizes use relative units (`rem`, not `px`) so they scale correctly with
 
 ### 2.2 Type roles — as shipped
 
-**v3 replaces the single condensed/impact face with four families**, each with
-one job. Sizes and letter-spacing are unchanged from §2.1.
+**v4 drops to three families.** Roboto Condensed's job — everything that
+isn't a numeral or the wordmark — moved to **Space Grotesk**, used at two
+weights instead of splitting Bold/Light across two type roles. The brief
+called Roboto Condensed "hella boring"; Space Grotesk has enough character in
+its lowercase `a`, `y`, `G` to carry headlines and buttons without a fourth
+family. Sizes and letter-spacing are otherwise unchanged from §2.1.
 
 | Role | Face | Where |
 |---|---|---|
 | Wordmark | **Righteous 400, 50px** | The splash/login screen only — the one screen with its own face |
 | Hero numerals | **Anton 400** | Momentum score, streak counts, timer digits, the big done/due fraction |
-| Large Title · Title 2 · Headline | **Roboto Condensed 700** | Screen titles, section headers, card titles |
-| Body · Subheadline · Footnote · Caption | **Roboto Condensed 300** | List rows, buttons, body copy, metadata |
-| Eyebrows / axis labels / metric captions | Roboto Condensed 400, uppercase, `0.14em` tracking | Reads as instrumentation without a fifth family |
+| Large Title · Title 2 · Headline · buttons · active tab label | **Space Grotesk 700**, `-0.03em` tracking | Screen titles, section headers, card titles, condensed-uppercase button labels |
+| Body · Subheadline · Footnote · Caption | **Space Grotesk 400** | List rows, body copy, metadata |
+| Eyebrows / axis labels / metric captions | Space Grotesk 500, uppercase, `0.13em` tracking | Reads as instrumentation without a separate face |
 
 The scoping *principle* from v1 survives intact and still matters: **the display
-faces never appear on a list row or in body copy.** Per Apple's type craft,
-tracking stays size-specific — large numerals tighten, body sits at 0.
+faces (Righteous, Anton) never appear on a list row or in body copy.** Per
+Apple's type craft, tracking stays size-specific — large numerals tighten,
+body sits at 0.
+
+<details><summary>v3 four-face system (superseded)</summary>
+
+| Role | Face | Where |
+|---|---|---|
+| Wordmark | Righteous 400, 50px | The splash/login screen only |
+| Hero numerals | Anton 400 | Momentum score, streak counts, timer digits |
+| Large Title · Title 2 · Headline | Roboto Condensed 700 | Screen titles, section headers, card titles |
+| Body · Subheadline · Footnote · Caption | Roboto Condensed 300 | List rows, buttons, body copy, metadata |
+| Eyebrows / axis labels / metric captions | Roboto Condensed 400, uppercase, `0.14em` tracking | Instrumentation |
+
+</details>
 
 <details><summary>v1/v2 single-display-face rule (superseded)</summary>
 
@@ -276,7 +359,7 @@ an area chart and was then **replaced by a stacked bar chart** (below). A
 | Component | Spec |
 |---|---|
 | **Mood Calendar** | Month grid, 7 columns, each day a filled circle colored by that day's `MoodTag` (map moods to the 5-color habit palette above); unlogged days render as `gray5` |
-| **Stacked Momentum Chart** *(v3, replaces the overlapping area chart)* | Bar chart, one thin bar per day, segmented by habit in the warm ramp, shared Y axis `0 … 100 × habitCount`. Each segment is that habit's own momentum, so stacking is a genuine **sum**, not a proportion — and every segment still equals the number on that habit's card |
+| **Arch Momentum Chart** *(v4, replaces the stacked bar chart)* | One bar per period — 7 daily bars (Week) or 12 monthly bars (Year, always exactly twelve regardless of account age) — each the **mean** momentum across active habits for that period, fully rounded top, value printed in black directly on the bar. No axis, no stacking, no per-habit segments: the previous stacked chart put up to five hues in every bar and was unreadable at phone width. The current period's bar is amber; every other bar is vermillion |
 | **Contribution Grid** *(v3, new)* | GitHub activity-graph treatment: one column per week, seven rows, in the habit's own hue. Intensity is graded 1–4 by that day's **momentum**, not binary done/not-done, so a run visibly builds and decays. Opens scrolled to the most recent weeks. Used by the Habits screen's Year view |
 | ~~Overlapping Momentum Chart~~ *(superseded)* | Area chart, one translucent (60% opacity) band per habit over a 7/30-day window, shared Y axis (0–100 momentum) |
 | **Streak Dot Row** | Horizontal row of small dots (last 14–21 days), filled = completed, outline = missed, using `color.tint` |
