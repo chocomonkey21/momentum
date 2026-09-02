@@ -11,7 +11,7 @@ import { EmptyState, Skeleton } from '@/components/ui/States';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { getFriends, getChallenges, requestFriendByUsername, type FriendRow, type ChallengeBoard } from '@/db/queries';
 import { cn } from '@/lib/cn';
-import { semantic, palette } from '@/theme/theme';
+import { palette } from '@/theme/theme';
 
 type Tab = 'friends' | 'challenges';
 
@@ -95,6 +95,23 @@ export default function FriendsPage() {
             />
           ) : (
             <div className="flex flex-col gap-6">
+              {/* The one solid block on this screen: how many people you're
+                  comparing momentum with. */}
+              <section
+                className="flex items-end justify-between rounded-[var(--radius-card)] p-6"
+                style={{ backgroundColor: palette.magenta, color: palette.ink0 }}
+              >
+                <div>
+                  <p className="font-data text-black/60">Friends</p>
+                  <p className="font-display-hero mt-2 text-[64px] leading-[0.85]">{accepted.length}</p>
+                </div>
+                <p className="font-data pb-1 text-right text-black/60">
+                  {pending.length} pending
+                  <br />
+                  {challengeRows.length} challenge{challengeRows.length === 1 ? '' : 's'}
+                </p>
+              </section>
+
               {pending.length > 0 && (
                 <section>
                   <h2 className="font-display mb-3 text-title2">Pending</h2>
@@ -184,7 +201,7 @@ export default function FriendsPage() {
                           <div className="flex items-center gap-3">
                             <span
                               className={cn(
-                                'font-display-hero w-6 shrink-0 text-center text-[18px]',
+                                'font-display-hero w-8 shrink-0 text-center text-[26px]',
                                 rank === 0 ? 'text-app-amber' : 'text-label-tertiary',
                               )}
                             >
@@ -205,14 +222,14 @@ export default function FriendsPage() {
                           {/* Progress bar uses tint for you, neutral grey for
                               others — tint stays meaningful, not decorative. */}
                           <div
-                            className="mt-2 h-2 overflow-hidden rounded-[var(--radius-pill)] bg-bg-tertiary"
+                            className="mt-2 h-3 overflow-hidden rounded-[var(--radius-pill)] bg-bg-tertiary"
                             role="presentation"
                           >
                             <div
                               className="h-full rounded-[var(--radius-pill)]"
                               style={{
                                 width: `${Math.round((p.progress / max) * 100)}%`,
-                                backgroundColor: isYou ? semantic.tint : palette.ink5,
+                                backgroundColor: isYou ? palette.amber : palette.ink5,
                               }}
                             />
                           </div>

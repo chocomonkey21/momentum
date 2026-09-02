@@ -92,7 +92,7 @@ export default function LoginPage() {
         transition={reduce ? reducedFade : spring.default}
         // Left-aligned: a centred paragraph is the fastest way to make a
         // product read as a template.
-        className="relative flex min-h-[320px] flex-1 flex-col justify-center"
+        className="relative flex min-h-[400px] flex-1 flex-col justify-center"
       >
         {/* The things people track, drifting around the name. */}
         <FloatingIcons />

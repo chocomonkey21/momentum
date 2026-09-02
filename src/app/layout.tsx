@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Righteous, Anton, Roboto_Condensed, Inter } from 'next/font/google';
+import { Righteous, Anton, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { AppProvider } from '@/context/AppContext';
@@ -39,14 +39,14 @@ const heroFace = Anton({
   variable: '--font-hero',
 });
 
-const condensedFace = Roboto_Condensed({
-  weight: ['700'],
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-condensed',
-});
-
-const uiFace = Inter({
+/**
+ * Space Grotesk carries everything that isn't a numeral or the wordmark:
+ * bold for headlines, buttons and tab labels, regular for body copy. It has
+ * enough character in its a / y / G to feel designed, and enough discipline
+ * to hold a settings screen. (Replaces Roboto Condensed Bold + Inter.)
+ */
+const uiFace = Space_Grotesk({
+  weight: ['400', '500', '700'],
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-inter',
@@ -69,7 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${wordmarkFace.variable} ${heroFace.variable} ${condensedFace.variable} ${uiFace.variable}`}
+      className={`${wordmarkFace.variable} ${heroFace.variable} ${uiFace.variable}`}
     >
       <body className="bg-ink1 text-label-primary antialiased">
         <AuthProvider>

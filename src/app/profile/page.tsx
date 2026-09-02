@@ -15,9 +15,6 @@ import type { PomodoroSession } from '@/db/schema';
 import { cn } from '@/lib/cn';
 import { semantic, palette } from '@/theme/theme';
 
-const BADGE_HUES = [palette.vermillion, palette.amber, palette.magenta, palette.blue, palette.plum];
-const onHue = (h: string) => (h === palette.blue || h === palette.plum ? palette.white : palette.ink0);
-
 /**
  * Profile (ui-spec.md §13) — identity, lifetime stats, achievements, and the
  * entry point to Settings.
@@ -118,44 +115,59 @@ export default function ProfilePage() {
             </span>
           </div>
 
-          {/* Badges are circles, cycling the five hues — the icon rings from
-              the reference. Unlocked = filled disc; locked = a dim outlined
-              ring with a lock (design-system.md §7). No tile behind them, so
-              the section reads differently from every card list above. */}
-          <ul className="grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-4">
-            {achievements.map((a, i) => {
-              const hue = BADGE_HUES[i % BADGE_HUES.length];
-              return (
+          <ul className="divide-y divide-white/[0.07] rounded-[var(--radius-card)] bg-bg-secondary px-5">
+            {achievements.map((a) => (
               <li key={a.id}>
                 <button
                   type="button"
                   onClick={() => setDetail(a)}
                   aria-label={`${a.name}, ${a.unlocked ? 'unlocked' : 'locked'}. ${a.criteria}.`}
-                  className="flex w-full flex-col items-center gap-3 rounded-[var(--radius-card)] px-2 py-2 transition-transform hover:-translate-y-1"
+                  className="flex min-h-[72px] w-full items-center gap-4 py-4 text-left"
                 >
+                  {/* One hue for every badge: amber disc when unlocked, a dim
+                      ring with a lock when not (design-system.md §7). */}
                   <span
                     aria-hidden
-                    className="inline-flex size-16 items-center justify-center rounded-[var(--radius-pill)] border-2"
+                    className="inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-pill)] border-2"
                     style={
                       a.unlocked
-                        ? { backgroundColor: hue, borderColor: hue, color: onHue(hue) }
+                        ? { backgroundColor: palette.amber, borderColor: palette.amber, color: palette.ink0 }
                         : { borderColor: palette.ink5, color: semantic.labelTertiary }
                     }
                   >
-                    {a.unlocked ? <Award size={26} strokeWidth={1.75} /> : <Lock size={20} strokeWidth={1.75} />}
+                    {a.unlocked ? <Award size={20} strokeWidth={2} /> : <Lock size={18} strokeWidth={2} />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span
+                      className={cn(
+                        'font-display block truncate text-[18px] leading-tight',
+                        a.unlocked ? 'text-label-primary' : 'text-label-secondary',
+                      )}
+                    >
+                      {a.name}
+                    </span>
+                    <span className="mt-1 block text-footnote text-label-tertiary">{a.criteria}</span>
+                    {!a.unlocked && (
+                      <span className="mt-2 block h-1 w-full overflow-hidden rounded-[var(--radius-pill)] bg-ink4">
+                        <span
+                          className="block h-full rounded-[var(--radius-pill)]"
+                          style={{
+                            width: `${Math.round(a.progress * 100)}%`,
+                            backgroundColor: palette.amber,
+                          }}
+                        />
+                      </span>
+                    )}
                   </span>
                   <span
-                    className={cn(
-                      'text-center text-footnote font-medium leading-tight',
-                      a.unlocked ? 'text-label-primary' : 'text-label-tertiary',
-                    )}
+                    className="font-data shrink-0"
+                    style={{ color: a.unlocked ? palette.amber : semantic.labelTertiary }}
                   >
-                    {a.name}
+                    {a.unlocked ? 'Unlocked' : `${Math.round(a.progress * 100)}%`}
                   </span>
                 </button>
               </li>
-              );
-            })}
+            ))}
           </ul>
         </section>
 
@@ -239,7 +251,10 @@ function StatTile({
 
   return (
     // The stat pattern: numeral, then a tiny uppercase label beneath it.
-    <div className="rounded-[var(--radius-card)] border-2 px-4 py-5" style={{ borderColor: hue }}>
+    <div
+      className="flex flex-col items-center rounded-t-[var(--radius-pill)] rounded-b-[var(--radius-block)] border-2 px-3 pb-5 pt-10 text-center"
+      style={{ borderColor: hue }}
+    >
       <dd className="font-display-hero text-[36px] leading-none" style={{ color: hue }}>
         <motion.span>{shown}</motion.span>
         {suffix}

@@ -78,8 +78,8 @@
 
   /* Inter for everything you read; condensed is reserved for headlines
      and Anton for numerals. */
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: var(--font-condensed), "Roboto Condensed", system-ui, sans-serif;
+  --font-sans: var(--font-inter), "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-inter), "Space Grotesk", system-ui, sans-serif;
   --font-hero-face: var(--font-hero), "Anton", Impact, sans-serif;
   --font-wordmark-face: var(--font-wordmark), "Righteous", system-ui, sans-serif;
   --font-mono: var(--font-inter), sans-serif;
@@ -93,7 +93,7 @@ html {
 body {
   background-color: var(--color-bg-primary);
   color: var(--color-label-primary);
-  /* Body copy is Inter — condensed light was too tight to read at 15–16px. */
+  /* Body copy is Space Grotesk Regular. */
   font-family: var(--font-sans);
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
@@ -102,11 +102,11 @@ body {
 
 /* ---- Typographic roles -------------------------------------------- */
 
-/* Large Title / Title 2 / Headline — Roboto Condensed Bold. */
+/* Large Title / Title 2 / Headline — Space Grotesk Bold, tight. */
 .font-display {
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.03em;
 }
 
 /* Hero numerals — Anton. One per surface, as large as the layout allows. */

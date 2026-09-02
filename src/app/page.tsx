@@ -59,7 +59,7 @@ export default function HomePage() {
         <header className="mb-8 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="font-data text-label-tertiary">{longDate()}</p>
-            <h1 className="font-display mt-3 text-[40px] leading-[0.98]">
+            <h1 className="font-display mt-3 text-[36px] leading-[1]">
               {greeting()},<br />
               {userName}
             </h1>
@@ -105,7 +105,7 @@ export default function HomePage() {
                     <span
                       className={cn(
                         'font-display-hero pb-1 text-[32px] leading-none',
-                        allDone ? 'text-black/50' : 'text-label-tertiary',
+                        allDone ? 'text-black/60' : 'text-label-tertiary',
                       )}
                     >
                       /{total}
@@ -129,11 +129,14 @@ export default function HomePage() {
                         <li
                           key={h.id}
                           className="h-3 flex-1 rounded-[var(--radius-pill)] transition-colors"
+                          // On the amber "all done" block an amber pip would
+                          // vanish, so every pip gets a dark ring there.
                           style={{
                             backgroundColor:
                               h.todayLog?.completed === 1
                                 ? chartHex(h.chartColor)
                                 : chartAlpha(h.chartColor, 0.18),
+                            boxShadow: allDone ? '0 0 0 2px rgba(0,0,0,0.35)' : 'none',
                           }}
                         />
                       ))}
@@ -155,7 +158,7 @@ export default function HomePage() {
                 <p className="font-display-hero mt-3 text-[44px] leading-none text-white">
                   {loading ? '—' : momentum}
                 </p>
-                <p className="mt-2 text-footnote text-white">across {habits.length} habits</p>
+                <p className="mt-2 text-footnote text-white">across {habits.length} habit{habits.length === 1 ? "" : "s"}</p>
               </button>
               {/* Outlined, so the two tiles read as a pair without being twins. */}
               <div

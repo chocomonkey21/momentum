@@ -128,13 +128,15 @@ export default function FocusPage() {
           {/* The timer block: tint blue while running, green the moment it
               completes, neutral while idle. The digits are the hero number. */}
           <div
-            className="flex flex-col items-center rounded-[var(--radius-card)] p-6 transition-colors duration-300"
+            // Idle: a blue ring on black. Running: filled blue. Done: filled green.
+            className="flex flex-col items-center rounded-[var(--radius-card)] border-2 p-6 transition-colors duration-300"
             style={{
               backgroundColor: justCompleted
                 ? semantic.positive
                 : running
                   ? semantic.tint
-                  : semantic.bgSecondary,
+                  : palette.ink0,
+              borderColor: justCompleted ? semantic.positive : semantic.tint,
               color: justCompleted ? palette.ink0 : palette.white,
             }}
           >
@@ -150,7 +152,7 @@ export default function FocusPage() {
                 trackColor={running || justCompleted ? 'rgba(0,0,0,0.18)' : palette.ink4}
               />
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <span className="font-display-hero text-[64px] leading-none">
+                <span className="font-display-hero text-[72px] leading-none">
                   {mins}:{String(secs).padStart(2, '0')}
                 </span>
                 {linkedHabit && (
@@ -206,7 +208,7 @@ export default function FocusPage() {
             </div>
           </div>
 
-          <fieldset className="w-full rounded-[var(--radius-card)] bg-bg-secondary p-5">
+          <fieldset className="w-full px-1 pt-2">
             <legend className="sr-only">Duration</legend>
             <p className="font-data mb-3 text-label-tertiary" aria-hidden>
               Duration
