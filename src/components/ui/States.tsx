@@ -1,6 +1,7 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { AlertCircle } from 'lucide-react';
 import { Button } from './Button';
 import { StarburstSolid } from './Starburst';
@@ -36,6 +37,7 @@ export function EmptyState({
   onAction?: () => void;
   className?: string;
 }) {
+  const reduce = useReducedMotion();
   return (
     <div
       className={cn(
@@ -43,7 +45,23 @@ export function EmptyState({
         className,
       )}
     >
-      <StarburstSolid size={44} className="text-white" />
+      {/* Pops in on the bouncy spring, then breathes slowly — the one
+          animated flourish an empty screen gets. Static under reduced-motion. */}
+      <motion.span
+        initial={reduce ? false : { scale: 0, rotate: -45 }}
+        animate={reduce ? { scale: 1 } : { scale: [1, 1.08, 1], rotate: 0 }}
+        transition={
+          reduce
+            ? { duration: 0 }
+            : {
+                rotate: { type: 'spring', damping: 12, stiffness: 180 },
+                scale: { delay: 0.5, duration: 4, repeat: Infinity, ease: 'easeInOut' },
+              }
+        }
+        className="inline-flex"
+      >
+        <StarburstSolid size={44} className="text-white" />
+      </motion.span>
       <p className="max-w-[30ch] font-display text-[24px] leading-[1.1]">{message}</p>
       {actionLabel && onAction && (
         <Button onClick={onAction} className="bg-white text-black hover:bg-white">

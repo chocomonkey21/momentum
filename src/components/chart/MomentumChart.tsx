@@ -61,7 +61,9 @@ export function MomentumChart({ habits, days }: { habits: HabitView[]; days: num
       b.n += 1;
       buckets.set(m, b);
     }
-    return [...buckets.entries()].map(([m, b]) => ({
+    // A 365-day window straddles thirteen calendar months; keep the twelve
+    // most recent so the year reads as one bar per month, current month last.
+    return [...buckets.entries()].slice(-12).map(([m, b]) => ({
       id: m,
       label: format(new Date(b.first + 'T00:00:00'), 'MMMMM'),
       long: format(new Date(b.first + 'T00:00:00'), 'MMMM yyyy'),

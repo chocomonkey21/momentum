@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
-import { StarburstSolid } from '@/components/ui/Starburst';
+import { FloatingIcons } from '@/components/ui/FloatingIcons';
 import { cn } from '@/lib/cn';
 import { spring, reducedFade } from '@/theme/theme';
 
@@ -92,13 +92,18 @@ export default function LoginPage() {
         transition={reduce ? reducedFade : spring.default}
         // Left-aligned: a centred paragraph is the fastest way to make a
         // product read as a template.
-        className="flex flex-1 flex-col justify-center"
+        className="relative flex min-h-[320px] flex-1 flex-col justify-center"
       >
-        <StarburstSolid size={56} className="mb-10 text-app-amber" />
-        <h1 className="font-wordmark leading-none">MOMENTUM</h1>
-        <p className="mt-4 max-w-[30ch] text-body leading-relaxed text-label-secondary">
-          Build better days. Miss one and your progress dips — it doesn&rsquo;t disappear.
-        </p>
+        {/* The things people track, drifting around the name. */}
+        <FloatingIcons />
+        <div className="relative">
+          <h1 className="font-wordmark leading-none" style={{ color: '#0b6bff' }}>
+            MOMENTUM
+          </h1>
+          <p className="mt-4 max-w-[28ch] text-body leading-relaxed text-label-secondary">
+            Build better days. Miss one and your progress dips — it doesn&rsquo;t disappear.
+          </p>
+        </div>
       </motion.div>
 
       <section className="flex flex-col gap-3">

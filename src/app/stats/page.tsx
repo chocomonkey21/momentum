@@ -123,7 +123,7 @@ export default function StatsPage() {
                           h.momentumScore,
                         )} of 100. Open details.`}
                         className={[
-                          'flex w-full min-h-[56px] items-center gap-3 rounded-[var(--radius-block)]',
+                          'flex w-full min-h-[64px] items-center gap-4 rounded-[var(--radius-block)]',
                           'bg-bg-secondary px-4 py-3 text-left transition-colors hover:bg-bg-tertiary',
                         ].join(' ')}
                       >
@@ -132,12 +132,14 @@ export default function StatsPage() {
                         {/* Outlined ring in the habit's hue; numeral in the same hue. */}
                         <span
                           aria-hidden
-                          className="size-4 shrink-0 rounded-[var(--radius-pill)] border-2"
+                          className="size-6 shrink-0 rounded-[var(--radius-pill)] border-[3px]"
                           style={{ borderColor: chartHex(h.chartColor) }}
                         />
-                        <span className="min-w-0 flex-1 truncate text-subheadline">{h.name}</span>
+                        <span className="font-display min-w-0 flex-1 truncate text-[20px] leading-tight">
+                          {h.name}
+                        </span>
                         <span
-                          className="font-display-hero text-[24px] leading-none"
+                          className="font-display-hero text-[28px] leading-none"
                           style={{ color: chartHex(h.chartColor) }}
                         >
                           {Math.round(h.momentumScore)}

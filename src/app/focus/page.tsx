@@ -288,7 +288,7 @@ export default function FocusPage() {
                     >
                       {s.completed === 1 && <Check size={14} className="text-black" />}
                     </span>
-                    <span className="flex-1 text-subheadline">
+                    <span className="font-display flex-1 text-[17px]">
                       {s.durationMinutes} min{habit ? ` · ${habit.name}` : ''}
                     </span>
                     <span className="font-data text-label-tertiary">
@@ -315,7 +315,7 @@ export default function FocusPage() {
               setLinkedHabitId(null);
               setPickerOpen(false);
             }}
-            className="min-h-[56px] rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-3 text-left text-body font-medium hover:bg-ink5"
+            className="font-display min-h-[56px] rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-3 text-left text-[18px] hover:bg-ink5"
           >
             No habit — general focus time
           </button>
@@ -327,7 +327,7 @@ export default function FocusPage() {
                 setLinkedHabitId(h.id);
                 setPickerOpen(false);
               }}
-              className="flex min-h-[56px] items-center gap-3 rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-3 text-left text-body font-medium hover:bg-ink5"
+              className="font-display flex min-h-[56px] items-center gap-3 rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-3 text-left text-[18px] hover:bg-ink5"
             >
               <span
                 aria-hidden

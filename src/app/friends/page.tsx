@@ -192,8 +192,8 @@ export default function FriendsPage() {
                             </span>
                             <span
                               className={cn(
-                                'min-w-0 flex-1 truncate text-subheadline',
-                                isYou && 'font-semibold',
+                                'font-display min-w-0 flex-1 truncate text-[18px] leading-tight',
+                                !isYou && 'text-label-secondary',
                               )}
                             >
                               {p.name}
@@ -295,7 +295,7 @@ function FriendRowItem({
         {initial}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-subheadline font-medium">{name}</span>
+        <span className="font-display block truncate text-[19px] leading-tight">{name}</span>
         {username && (
           <span className="block truncate text-footnote text-label-secondary">@{username}</span>
         )}
