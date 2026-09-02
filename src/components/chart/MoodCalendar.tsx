@@ -174,7 +174,7 @@ export function MoodCalendar({
 
       <ul className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         {([1, 2, 3, 4, 5] as MoodTag[]).map((m) => (
-          <li key={m} className="flex items-center gap-1.5">
+          <li key={m} className="flex items-center gap-1">
             <span
               aria-hidden
               className="size-2.5 rounded-full"
@@ -183,7 +183,7 @@ export function MoodCalendar({
             <span className="text-caption1 text-label-secondary">{MOOD_LABELS[m]}</span>
           </li>
         ))}
-        <li className="flex items-center gap-1.5">
+        <li className="flex items-center gap-1">
           <span
             aria-hidden
             className="size-2.5 rounded-full"
@@ -214,7 +214,7 @@ export function StreakDotRow({ logs, days = 21 }: { logs: HabitLog[]; days?: num
   return (
     <div>
       <div
-        className="flex flex-wrap items-center gap-1.5"
+        className="flex flex-wrap items-center gap-1"
         role="img"
         aria-label={`Last ${days} days: ${completed} completed`}
       >
@@ -310,7 +310,7 @@ function Metric({ label, value, color }: { label: string; value: string; color?:
       >
         {value}
       </dd>
-      <dt className="font-data mt-1.5 text-[9px] text-label-tertiary">{label}</dt>
+      <dt className="font-data mt-1 text-[10px] text-label-tertiary">{label}</dt>
     </div>
   );
 }

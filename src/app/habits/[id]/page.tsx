@@ -15,9 +15,10 @@ import { AddHabitSheet } from '@/components/habit/AddHabitSheet';
 import { LogHabitSheet } from '@/components/habit/LogHabitSheet';
 import { habitInsight, MIN_LOGS_FOR_INSIGHT } from '@/lib/insights';
 import { adaptiveDifficultySuggestion } from '@/lib/momentum';
-import { MOOD_LABELS, MOOD_COLORS, chartHex, onChartHex } from '@/theme/theme';
+import { MOOD_LABELS, MOOD_COLORS, chartHex, onChartHex, palette } from '@/theme/theme';
 import { formatHHmm } from '@/lib/dates';
 import { format } from 'date-fns';
+import { cn } from '@/lib/cn';
 import type { MoodTag } from '@/db/schema';
 
 const DIFFICULTY_NAMES: Record<1 | 2 | 3, string> = { 1: 'Easy', 2: 'Medium', 3: 'Hard' };
@@ -95,6 +96,10 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
 
   const chainNames = chainNamesForHabit(habit.id);
   const loggedDays = habit.logs.length;
+  const heroBg = chartHex(habit.chartColor);
+  const heroFg = onChartHex(habit.chartColor);
+  // Black can be dimmed on the light hues and still clear AA; white on blue can't.
+  const muted = heroFg === palette.ink0 ? 'opacity-70' : '';
 
   return (
     <Screen>
@@ -109,40 +114,59 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
           }
         />
 
-        {/* --- Hero: the momentum ring gets the most visual weight (CLAUDE.md §3) --- */}
-        <section className="mb-8 flex flex-col items-center gap-4">
-          <MomentumRing
-            value={habit.momentumScore}
-            label="Momentum"
-            size={200}
-            fillColor={chartHex(habit.chartColor)}
-          />
-          {/* Streak gets the stat pattern; the rest are quiet metadata chips. */}
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex items-baseline gap-2">
-              <Flame size={20} className="text-warning" aria-hidden />
-              <span className="font-display-hero text-[40px] leading-none">{habit.streak}</span>
-              <span className="font-data text-label-tertiary">day streak</span>
+        {/* --- Hero: one solid block of the habit's own hue. The ring is the
+            hero (CLAUDE.md §3); everything else on the block is subordinate. --- */}
+        <section
+          className="mb-6 rounded-[var(--radius-card)] p-6"
+          style={{ backgroundColor: heroBg, color: heroFg }}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              {habit.categoryTag && <p className={cn('font-data', muted)}>{habit.categoryTag}</p>}
+              {/* Streak: stat pattern. */}
+              <div className="mt-6 flex items-baseline gap-2">
+                <span className="font-display-hero text-[56px] leading-none">{habit.streak}</span>
+                <Flame size={20} aria-hidden className={muted} />
+              </div>
+              <p className={cn('font-data mt-2', muted)}>
+                day{habit.streak === 1 ? '' : 's'} running
+              </p>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {[
-                DIFFICULTY_NAMES[habit.difficultyLevel],
-                habit.frequency,
-                habit.timeConstraint ? `by ${formatHHmm(habit.timeConstraint)}` : null,
-              ]
-                .filter(Boolean)
-                .map((chip) => (
-                  <span
-                    key={chip as string}
-                    className="rounded-[var(--radius-pill)] bg-bg-secondary px-3 py-1.5 text-footnote capitalize text-label-secondary"
-                  >
-                    {chip}
-                  </span>
-                ))}
-            </div>
+            <MomentumRing
+              value={habit.momentumScore}
+              label="Momentum"
+              size={148}
+              strokeWidth={14}
+              fillColor={heroFg}
+              trackColor="rgba(0,0,0,0.18)"
+              className="shrink-0"
+            />
           </div>
 
-          <Button onClick={() => setLogOpen(true)} className="mt-2">
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            {[
+              DIFFICULTY_NAMES[habit.difficultyLevel],
+              habit.frequency,
+              habit.timeConstraint ? `by ${formatHHmm(habit.timeConstraint)}` : null,
+            ]
+              .filter(Boolean)
+              .map((chip) => (
+                <span
+                  key={chip as string}
+                  className="font-data rounded-[var(--radius-pill)] px-3 py-2 capitalize"
+                  style={{ backgroundColor: 'rgba(0,0,0,0.18)' }}
+                >
+                  {chip}
+                </span>
+              ))}
+          </div>
+
+          <Button
+            onClick={() => setLogOpen(true)}
+            fullWidth
+            className="mt-6"
+            style={{ backgroundColor: heroFg, color: heroBg }}
+          >
             <NotebookPen size={18} aria-hidden />
             Log today
           </Button>
@@ -215,21 +239,30 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
         description={habit.name}
       >
         {selectedLog ? (
-          <dl className="flex flex-col gap-4">
+          <dl className="flex flex-col gap-5">
             <div>
-              <dt className="text-caption1 uppercase tracking-wide text-label-secondary">Status</dt>
-              <dd className="mt-1 text-body">
-                {selectedLog.completed === 1 ? 'Completed' : 'Missed'}
+              <dt className="font-data text-label-tertiary">Status</dt>
+              <dd className="mt-2">
+                <span
+                  className="font-display inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] px-4 text-[15px] uppercase tracking-[0.04em]"
+                  style={
+                    selectedLog.completed === 1
+                      ? { backgroundColor: heroBg, color: heroFg }
+                      : { backgroundColor: palette.ink4, color: palette.white }
+                  }
+                >
+                  {selectedLog.completed === 1 ? 'Completed' : 'Missed'}
+                </span>
               </dd>
             </div>
             <div>
-              <dt className="text-caption1 uppercase tracking-wide text-label-secondary">Mood</dt>
-              <dd className="mt-1 flex items-center gap-2 text-body">
+              <dt className="font-data text-label-tertiary">Mood</dt>
+              <dd className="mt-2 flex items-center gap-3 text-body">
                 {selectedLog.moodTag ? (
                   <>
                     <span
                       aria-hidden
-                      className="size-3 rounded-full"
+                      className="size-6 rounded-[8px]"
                       style={{ backgroundColor: MOOD_COLORS[selectedLog.moodTag as MoodTag] }}
                     />
                     {MOOD_LABELS[selectedLog.moodTag as MoodTag]}
@@ -240,8 +273,8 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
               </dd>
             </div>
             <div>
-              <dt className="text-caption1 uppercase tracking-wide text-label-secondary">Context</dt>
-              <dd className="mt-1 text-body">
+              <dt className="font-data text-label-tertiary">Context</dt>
+              <dd className="mt-2 text-body">
                 {selectedLog.contextTag ? (
                   CONTEXT_NAMES[selectedLog.contextTag]
                 ) : (
@@ -250,14 +283,14 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
               </dd>
             </div>
             <div>
-              <dt className="text-caption1 uppercase tracking-wide text-label-secondary">Notes</dt>
-              <dd className="mt-1 text-body">
+              <dt className="font-data text-label-tertiary">Notes</dt>
+              <dd className="mt-2 text-body leading-relaxed">
                 {selectedLog.notes ?? <span className="text-label-secondary">No notes</span>}
               </dd>
             </div>
           </dl>
         ) : (
-          <p className="text-body text-label-secondary">Nothing was logged on this day.</p>
+          <p className="text-body leading-relaxed text-label-secondary">Nothing was logged on this day.</p>
         )}
       </Sheet>
 

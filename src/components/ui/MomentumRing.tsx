@@ -20,6 +20,8 @@ interface MomentumRingProps {
   className?: string;
   /** Optional override for the fill color (used by the Pomodoro timer ring). */
   fillColor?: string;
+  /** Optional override for the track, for a ring sitting on a coloured block. */
+  trackColor?: string;
   /** Suppresses the momentum-threshold celebration (e.g. for the focus timer). */
   celebrate?: boolean;
   /**
@@ -48,6 +50,7 @@ export function MomentumRing({
   loading = false,
   className,
   fillColor,
+  trackColor,
   celebrate = true,
   showValue = true,
 }: MomentumRingProps) {
@@ -83,7 +86,7 @@ export function MomentumRing({
   return (
     <motion.div
       className={cn('relative inline-flex items-center justify-center', className)}
-      animate={pulse && !reduce ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+      animate={pulse && !reduce ? { scale: [1.05, 1] } : { scale: 1 }}
       transition={reduce ? reducedFade : spring.bouncy}
     >
       <svg width={size} height={size} role="presentation" className="-rotate-90">
@@ -92,7 +95,7 @@ export function MomentumRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={palette.ink4}
+          stroke={trackColor ?? palette.ink4}
           strokeWidth={strokeWidth}
         />
         <motion.circle
@@ -120,14 +123,16 @@ export function MomentumRing({
           <span
             className={cn(
               'tabular-nums leading-none',
-              hero ? 'font-display-hero text-[56px]' : 'font-display text-title2',
+              hero ? 'font-display-hero' : 'font-display text-title2',
             )}
+            // The numeral scales with the ring so a small ring never overflows.
+            style={hero ? { fontSize: Math.round(size * 0.3) } : undefined}
           >
             {Math.round(clamped)}
           </span>
         )}
         {label && (
-          <span className="font-data mt-1.5 text-[10px] text-label-tertiary">
+          <span className="font-data mt-2" style={{ opacity: trackColor ? 1 : 0.7 }}>
             {label}
           </span>
         )}

@@ -10,7 +10,7 @@ import { Sheet } from '@/components/ui/Sheet';
 import { MomentumRing } from '@/components/ui/MomentumRing';
 import { savePomodoroSession, getPomodoroSessions } from '@/db/queries';
 import type { PomodoroSession } from '@/db/schema';
-import { semantic, chartHex } from '@/theme/theme';
+import { semantic, chartHex, palette } from '@/theme/theme';
 import { cn } from '@/lib/cn';
 
 const PRESETS = [25, 45, 60];
@@ -122,66 +122,96 @@ export default function FocusPage() {
   return (
     <Screen>
       <PageFade>
-        <ScreenHeader title="Focus" />
+        <ScreenHeader title="Focus" eyebrow="Pomodoro" />
 
-        <section className="flex flex-col items-center gap-6">
-          <div className="relative">
-            <MomentumRing
-              value={pct}
-              size={240}
-              strokeWidth={16}
-              hero={false}
-              celebrate={false}
-              showValue={false}
-              fillColor={justCompleted ? semantic.positive : semantic.tint}
-              label={linkedHabit ? linkedHabit.name : undefined}
-            />
-            {/* Timer digits are the hero number on this screen — the one place
-                the display face is allowed here (design-system.md §2.2). */}
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-display-hero text-5xl tabular-nums leading-none">
-                {mins}:{String(secs).padStart(2, '0')}
-              </span>
-              {linkedHabit && (
-                <span className="mt-2 max-w-[150px] truncate text-caption1 uppercase tracking-wide text-label-secondary">
-                  {linkedHabit.name}
+        <section className="flex flex-col gap-4">
+          {/* The timer block: tint blue while running, green the moment it
+              completes, neutral while idle. The digits are the hero number. */}
+          <div
+            className="flex flex-col items-center rounded-[var(--radius-card)] p-6 transition-colors duration-300"
+            style={{
+              backgroundColor: justCompleted
+                ? semantic.positive
+                : running
+                  ? semantic.tint
+                  : semantic.bgSecondary,
+              color: justCompleted ? palette.ink0 : palette.white,
+            }}
+          >
+            <div className="relative">
+              <MomentumRing
+                value={pct}
+                size={232}
+                strokeWidth={18}
+                hero={false}
+                celebrate={false}
+                showValue={false}
+                fillColor={justCompleted ? palette.ink0 : running ? palette.white : semantic.tint}
+                trackColor={running || justCompleted ? 'rgba(0,0,0,0.18)' : palette.ink4}
+              />
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="font-display-hero text-[64px] leading-none">
+                  {mins}:{String(secs).padStart(2, '0')}
                 </span>
-              )}
+                {linkedHabit && (
+                  <span className={cn('font-data mt-2 max-w-[152px] truncate', justCompleted && 'opacity-70')}>
+                    {linkedHabit.name}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div
+              role="status"
+              aria-live="polite"
+              className={cn('font-data mt-4 min-h-[16px]', justCompleted && 'opacity-70')}
+            >
+              {/* Announce at minute boundaries and completion, not every tick
+                  (ui-spec.md §10 assumption). */}
+              {justCompleted
+                ? 'Session complete'
+                : running
+                  ? `${mins} minute${mins === 1 ? '' : 's'} remaining`
+                  : startedAt
+                    ? 'Paused'
+                    : 'Ready when you are'}
+            </div>
+
+            <div className="mt-6 flex w-full items-center gap-3">
+              <Button
+                onClick={running ? pause : start}
+                className="flex-1"
+                style={{
+                  backgroundColor: justCompleted ? palette.ink0 : palette.white,
+                  color: justCompleted ? palette.white : palette.ink0,
+                }}
+              >
+                {running ? <Pause size={18} aria-hidden /> : <Play size={18} aria-hidden />}
+                {running ? 'Pause' : startedAt ? 'Resume' : 'Start'}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={reset}
+                disabled={idle}
+                aria-label="Reset session"
+                className="px-5"
+                style={
+                  running || justCompleted
+                    ? { backgroundColor: 'rgba(0,0,0,0.2)', color: 'inherit' }
+                    : undefined
+                }
+              >
+                <RotateCcw size={18} aria-hidden />
+              </Button>
             </div>
           </div>
 
-          <div
-            role="status"
-            aria-live="polite"
-            className="min-h-[20px] text-subheadline text-label-secondary"
-          >
-            {/* Announce at minute boundaries and completion, not every tick
-                (ui-spec.md §10 assumption). */}
-            {justCompleted
-              ? 'Session complete'
-              : running
-                ? `${mins} minute${mins === 1 ? '' : 's'} remaining`
-                : startedAt
-                  ? 'Paused'
-                  : 'Ready when you are'}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button onClick={running ? pause : start}>
-              {running ? <Pause size={18} aria-hidden /> : <Play size={18} aria-hidden />}
-              {running ? 'Pause' : startedAt ? 'Resume' : 'Start'}
-            </Button>
-            <Button variant="secondary" onClick={reset} disabled={idle}>
-              <RotateCcw size={18} aria-hidden />
-              Reset
-            </Button>
-          </div>
-
-          <fieldset className="w-full">
-            <legend className="font-data mb-3 w-full text-center text-label-tertiary">
+          <fieldset className="w-full rounded-[var(--radius-card)] bg-bg-secondary p-5">
+            <legend className="sr-only">Duration</legend>
+            <p className="font-data mb-3 text-label-tertiary" aria-hidden>
               Duration
-            </legend>
-            <div className="flex justify-center gap-2">
+            </p>
+            <div className="flex gap-2">
               {PRESETS.map((p) => (
                 <Chip
                   key={p}
@@ -193,6 +223,7 @@ export default function FocusPage() {
                     setDuration(p);
                     setRemaining(p * 60);
                   }}
+                  className="flex-1"
                 >
                   {p} min
                 </Chip>
@@ -207,7 +238,7 @@ export default function FocusPage() {
             onClick={() => setPickerOpen(true)}
             disabled={!idle}
             className={cn(
-              'flex w-full min-h-[44px] items-center gap-3 rounded-[var(--radius-card)]',
+              'flex w-full min-h-[56px] items-center gap-3 rounded-[var(--radius-card)]',
               'bg-bg-secondary px-5 py-4 text-left transition-colors hover:bg-bg-tertiary',
               'disabled:cursor-not-allowed disabled:opacity-40',
             )}
@@ -219,14 +250,14 @@ export default function FocusPage() {
             {linkedHabit && (
               <span
                 aria-hidden
-                className="size-2.5 rounded-full"
+                className="size-6 rounded-[8px]"
                 style={{ backgroundColor: chartHex(linkedHabit.chartColor) }}
               />
             )}
           </button>
 
           {linkedHabit && (
-            <p className="-mt-3 text-footnote leading-relaxed text-label-secondary">
+            <p className="text-footnote leading-relaxed text-label-secondary">
               Linking records the session against {linkedHabit.name}. It doesn&rsquo;t mark the
               habit complete — log that separately.
             </p>
@@ -234,7 +265,7 @@ export default function FocusPage() {
         </section>
 
         <section className="mt-10">
-          <h2 className="mb-3 text-title2 font-bold">Today&rsquo;s sessions</h2>
+          <h2 className="font-display mb-3 text-title2">Today&rsquo;s sessions</h2>
           {todaySessions.length === 0 ? (
             <p className="rounded-[var(--radius-card)] bg-bg-secondary px-5 py-6 text-body text-label-secondary">
               No focus sessions yet today.
@@ -246,7 +277,7 @@ export default function FocusPage() {
                 return (
                   <li
                     key={s.id}
-                    className="flex items-center gap-3 rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3.5"
+                    className="flex items-center gap-3 rounded-[var(--radius-block)] bg-bg-secondary px-4 py-4"
                   >
                     <span
                       aria-hidden
@@ -284,7 +315,7 @@ export default function FocusPage() {
               setLinkedHabitId(null);
               setPickerOpen(false);
             }}
-            className="min-h-[44px] rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3 text-left text-body hover:bg-bg-tertiary"
+            className="min-h-[56px] rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-3 text-left text-body font-medium hover:bg-ink5"
           >
             No habit — general focus time
           </button>
@@ -296,11 +327,11 @@ export default function FocusPage() {
                 setLinkedHabitId(h.id);
                 setPickerOpen(false);
               }}
-              className="flex min-h-[44px] items-center gap-3 rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3 text-left text-body hover:bg-bg-tertiary"
+              className="flex min-h-[56px] items-center gap-3 rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-3 text-left text-body font-medium hover:bg-ink5"
             >
               <span
                 aria-hidden
-                className="size-2.5 rounded-full"
+                className="size-8 rounded-[10px]"
                 style={{ backgroundColor: chartHex(h.chartColor) }}
               />
               {h.name}

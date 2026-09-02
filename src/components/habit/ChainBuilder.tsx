@@ -67,7 +67,7 @@ export function ChainBuilder({
     >
       <div className="flex flex-col gap-6">
         <div>
-          <label htmlFor="chain-name" className="font-data mb-2 block text-[10px] text-label-tertiary">
+          <label htmlFor="chain-name" className="font-data mb-2 block text-label-tertiary">
             Chain name
           </label>
           <input
@@ -77,20 +77,15 @@ export function ChainBuilder({
             onChange={(e) => setName(e.target.value)}
             placeholder="Morning Routine"
             className={cn(
-              'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-3.5',
-              'text-body text-label-primary placeholder:text-label-tertiary',
-              'border border-transparent transition-colors focus:border-tint',
+              'w-full rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-4',
+              'font-display text-[22px] text-label-primary placeholder:text-label-tertiary',
+              'border-2 border-transparent transition-colors focus:border-tint',
             )}
           />
         </div>
 
         <div>
-          <h3 className="mb-2 text-subheadline text-label-secondary">
-            In this chain{' '}
-            <span className="text-label-tertiary">
-              ({selected.length} habit{selected.length === 1 ? '' : 's'})
-            </span>
-          </h3>
+          <h3 className="font-data mb-3 text-label-tertiary">In this chain · {selected.length}</h3>
 
           {selected.length === 0 ? (
             <p className="rounded-[var(--radius-block)] bg-bg-secondary px-4 py-5 text-footnote text-label-secondary">
@@ -128,7 +123,7 @@ export function ChainBuilder({
 
         {available.length > 0 && (
           <div>
-            <h3 className="font-data mb-2.5 text-[10px] text-label-tertiary">Add a habit</h3>
+            <h3 className="font-data mb-3 text-label-tertiary">Add a habit</h3>
             <div className="flex flex-wrap gap-2">
               {available.map((h) => (
                 <Chip key={h.id} selected={false} onSelect={() => setSelected([...selected, h.id])}>
@@ -184,14 +179,14 @@ function ChainRow({
       // Picked-up chip lifts and casts a shadow — the visual stand-in for the
       // haptic the native build would have used (interaction-spec.md §14).
       whileDrag={reduce ? undefined : { scale: 1.05, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}
-      className="flex items-center gap-2 rounded-[var(--radius-block)] bg-bg-secondary p-2 pl-3"
+      className="flex items-center gap-3 rounded-[var(--radius-block)] bg-bg-tertiary p-2 pl-2"
     >
       <span
         aria-hidden
-        className="size-2.5 shrink-0 rounded-full"
+        className="size-8 shrink-0 rounded-[10px]"
         style={{ backgroundColor: color }}
       />
-      <span className="min-w-0 flex-1 truncate text-subheadline">{name}</span>
+      <span className="min-w-0 flex-1 truncate text-body font-medium">{name}</span>
 
       <IconButton
         label={`Move ${name} up`}
@@ -218,7 +213,7 @@ function ChainRow({
         // the accessible path.
         aria-hidden
         onPointerDown={(e) => controls.start(e)}
-        className="cursor-grab touch-none p-1.5 text-label-secondary hover:text-label-primary active:cursor-grabbing"
+        className="cursor-grab touch-none p-2 text-label-secondary hover:text-label-primary active:cursor-grabbing"
       >
         <GripVertical size={18} />
       </span>

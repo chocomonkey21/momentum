@@ -15,7 +15,7 @@ import { cn } from '@/lib/cn';
 type StatSize = 'sm' | 'md' | 'lg' | 'xl';
 
 const VALUE_SIZE: Record<StatSize, string> = {
-  sm: 'text-[26px] leading-[0.9]',
+  sm: 'text-[28px] leading-[0.9]',
   md: 'text-[36px] leading-[0.88]',
   lg: 'text-[52px] leading-[0.86]',
   xl: 'text-[72px] leading-[0.84]',

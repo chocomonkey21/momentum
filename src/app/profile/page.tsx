@@ -74,17 +74,20 @@ export default function ProfilePage() {
       <PageFade>
         <ScreenHeader title="Profile" />
 
-        <section className="mb-8 flex items-center gap-4">
+        {/* Identity block: amber, the user's initial as a hero glyph. */}
+        <section
+          className="mb-4 flex items-center gap-5 rounded-[var(--radius-card)] p-5"
+          style={{ backgroundColor: palette.amber, color: palette.ink0 }}
+        >
           <span
             aria-hidden
-            className="inline-flex size-16 shrink-0 items-center justify-center rounded-[var(--radius-block)] font-display text-large-title"
-            style={{ backgroundColor: palette.amber, color: palette.ink0 }}
+            className="font-display-hero inline-flex size-20 shrink-0 items-center justify-center rounded-[var(--radius-block)] bg-black/15 text-[44px]"
           >
             {userName.trim().charAt(0).toUpperCase() || 'M'}
           </span>
           <div className="min-w-0">
-            <p className="font-display truncate text-title2">{userName}</p>
-            <p className="text-subheadline text-label-secondary">
+            <p className="font-display truncate text-[28px] leading-tight">{userName}</p>
+            <p className="font-data mt-2 opacity-70">
               {habits.length} active habit{habits.length === 1 ? '' : 's'}
             </p>
           </div>
@@ -95,7 +98,12 @@ export default function ProfilePage() {
             <Skeleton className="h-24 w-full rounded-[var(--radius-card)]" />
           ) : (
             <dl className="grid grid-cols-3 gap-3">
-              <StatTile label="Best streak" value={stats.bestStreak} />
+              <StatTile
+                label="Best streak"
+                value={stats.bestStreak}
+                bg={semantic.tint}
+                fg={palette.white}
+              />
               <StatTile label="Completions" value={stats.completions} />
               <StatTile label="Consistency" value={stats.consistency} suffix="%" />
             </dl>
@@ -118,8 +126,8 @@ export default function ProfilePage() {
                   onClick={() => setDetail(a)}
                   aria-label={`${a.name}, ${a.unlocked ? 'unlocked' : 'locked'}. ${a.criteria}.`}
                   className={cn(
-                    'flex w-full flex-col items-center gap-2.5 rounded-[var(--radius-block)]',
-                    'bg-bg-secondary px-2 py-4 transition-colors hover:bg-bg-tertiary',
+                    'flex w-full flex-col items-center gap-3 rounded-[var(--radius-card)]',
+                    'bg-bg-secondary px-2 py-5 transition-colors hover:bg-bg-tertiary',
                   )}
                 >
                   {/* Unlocked badges are a solid block of colour; locked ones
@@ -154,12 +162,12 @@ export default function ProfilePage() {
             type="button"
             onClick={() => router.push('/settings')}
             className={cn(
-              'flex w-full min-h-[44px] items-center gap-3 rounded-[var(--radius-card)]',
+              'flex w-full min-h-[56px] items-center gap-3 rounded-[var(--radius-card)]',
               'bg-bg-secondary px-5 py-4 text-left transition-colors hover:bg-bg-tertiary',
             )}
           >
             <SettingsIcon size={18} className="text-label-tertiary" aria-hidden />
-            <span className="flex-1 text-body">Settings</span>
+            <span className="flex-1 text-body font-medium">Settings</span>
             <ChevronRight size={18} className="text-label-tertiary" aria-hidden />
           </button>
         </section>
@@ -176,9 +184,9 @@ export default function ProfilePage() {
             <p className="text-body">{detail.criteria}</p>
             {!detail.unlocked && (
               <div>
-                <div className="h-2 overflow-hidden rounded-full bg-bg-tertiary">
+                <div className="h-3 overflow-hidden rounded-[var(--radius-pill)] bg-bg-tertiary">
                   <div
-                    className="h-full rounded-full bg-tint"
+                    className="h-full rounded-[var(--radius-pill)] bg-app-amber"
                     style={{ width: `${Math.round(detail.progress * 100)}%` }}
                   />
                 </div>
@@ -199,10 +207,15 @@ function StatTile({
   label,
   value,
   suffix = '',
+  bg,
+  fg,
 }: {
   label: string;
   value: number;
   suffix?: string;
+  /** Optional solid fill — one tile per row earns colour, the rest stay neutral. */
+  bg?: string;
+  fg?: string;
 }) {
   const reduce = useReducedMotion();
   const [shown, setShown] = useState(reduce ? value : 0);
@@ -226,12 +239,15 @@ function StatTile({
 
   return (
     // The stat pattern: numeral, then a tiny uppercase label beneath it.
-    <div className="rounded-[var(--radius-block)] bg-bg-secondary px-3 py-5">
-      <dd className="font-display-hero text-[34px] leading-none">
+    <div
+      className="rounded-[var(--radius-card)] px-4 py-5"
+      style={{ backgroundColor: bg ?? semantic.bgSecondary, color: fg ?? palette.white }}
+    >
+      <dd className="font-display-hero text-[36px] leading-none">
         <motion.span>{shown}</motion.span>
         {suffix}
       </dd>
-      <dt className="font-data mt-2 text-label-tertiary">{label}</dt>
+      <dt className={cn('font-data mt-2', !bg && 'opacity-70')}>{label}</dt>
     </div>
   );
 }

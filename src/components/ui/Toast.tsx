@@ -31,14 +31,14 @@ export function ToastHost() {
               // Flat, opaque surface: §4 scopes blur to the nav and sheet
               // scrims, and a toast needs no shadow to read above the page.
               'pointer-events-auto flex items-center gap-4 rounded-[var(--radius-pill)]',
-              'border border-white/10 bg-ink4 px-5 py-3',
+              'bg-app-amber px-5 py-3 text-black',
             ].join(' ')}
           >
-            <span className="text-subheadline">{toast.message}</span>
+            <span className="text-subheadline font-medium">{toast.message}</span>
             {toast.actionLabel && (
               <button
                 type="button"
-                className="min-h-[24px] text-subheadline font-semibold text-tint"
+                className="font-display min-h-[24px] text-[14px] uppercase tracking-[0.04em] underline underline-offset-4"
                 onClick={() => {
                   toast.onAction?.();
                   dismissToast();

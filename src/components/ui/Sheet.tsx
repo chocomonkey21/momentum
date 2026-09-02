@@ -59,12 +59,12 @@ export function Sheet({
                   'bg-bg-elevated px-5 pb-8 pt-4',
                 )}
               >
-                <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink5" aria-hidden />
-                <div className="mb-5 flex items-start justify-between gap-4">
+                <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-ink5" aria-hidden />
+                <div className="mb-6 flex items-start justify-between gap-4">
                   <div>
-                    <Dialog.Title className="font-display text-title2">{title}</Dialog.Title>
+                    <Dialog.Title className="font-display text-[28px] leading-[1.05]">{title}</Dialog.Title>
                     {description && (
-                      <Dialog.Description className="mt-1.5 text-subheadline text-label-secondary">
+                      <Dialog.Description className="mt-2 text-subheadline text-label-secondary">
                         {description}
                       </Dialog.Description>
                     )}
@@ -114,7 +114,7 @@ export function ConfirmDialog({
             'rounded-[var(--radius-sheet)] border border-white/10 bg-bg-elevated p-6',
           )}
         >
-          <AlertDialog.Title className="font-display text-title2">{title}</AlertDialog.Title>
+          <AlertDialog.Title className="font-display text-[28px] leading-[1.05]">{title}</AlertDialog.Title>
           <AlertDialog.Description className="mt-2 text-subheadline text-label-secondary">
             {body}
           </AlertDialog.Description>
@@ -123,10 +123,7 @@ export function ConfirmDialog({
               <Button variant="secondary">Cancel</Button>
             </AlertDialog.Cancel>
             <AlertDialog.Action asChild>
-              <Button
-                onClick={onConfirm}
-                className="bg-destructive text-white hover:brightness-110"
-              >
+              <Button variant="destructive" onClick={onConfirm}>
                 {confirmLabel}
               </Button>
             </AlertDialog.Action>

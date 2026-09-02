@@ -76,7 +76,7 @@ export default function SettingsPage() {
             )}
           >
             <span>
-              <span className="block text-body">Daily reminders</span>
+              <span className="block text-body font-medium">Daily reminders</span>
               <span className="block text-footnote text-label-secondary">
                 A nudge in this browser while the app is open
               </span>
@@ -86,13 +86,13 @@ export default function SettingsPage() {
               checked={notificationsEnabled}
               disabled={blocked}
               onChange={(e) => void toggleNotifications(e.target.checked)}
-              className="size-6 accent-[var(--color-tint)]"
+              className="toggle"
             />
           </label>
 
           {blocked && (
             <p className="mt-2 flex items-start gap-2 rounded-[var(--radius-block)] bg-bg-secondary p-4 text-footnote text-label-secondary">
-              <BellOff size={14} className="mt-0.5 shrink-0" aria-hidden />
+              <BellOff size={14} className="mt-1 shrink-0" aria-hidden />
               <span>
                 {permission === 'unsupported'
                   ? "This browser doesn't support notifications. Everything else works exactly the same."
@@ -105,7 +105,7 @@ export default function SettingsPage() {
               off (ui-spec.md §14 disabled state). */}
           {notificationsEnabled && !blocked && (
             <div className="mt-3 rounded-[var(--radius-card)] bg-bg-secondary px-5 py-4">
-              <label htmlFor="reminder-time" className="block text-body">
+              <label htmlFor="reminder-time" className="block text-body font-medium">
                 Reminder time
               </label>
               <p className="mb-3 text-footnote text-label-secondary">
@@ -175,7 +175,7 @@ export default function SettingsPage() {
         <section className="mb-8">
           <h2 className="font-display mb-3 text-title2">Session</h2>
           <div className="rounded-[var(--radius-card)] bg-bg-secondary px-5 py-4">
-            <p className="font-data text-[10px] text-label-tertiary">Signed in as</p>
+            <p className="font-data text-label-tertiary">Signed in as</p>
             <p className="mt-1 truncate text-body">{email ?? '—'}</p>
             <div className="mt-4">
               <Button variant="secondary" onClick={() => setConfirmSignOut(true)}>

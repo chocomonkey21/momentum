@@ -60,10 +60,10 @@ export function SegmentedControl<T extends string>({
             aria-selected={selected}
             onClick={() => onChange(opt.value)}
             className={cn(
-              'relative flex-1 rounded-[9px] px-3 transition-colors',
+              'relative flex-1 rounded-[10px] px-3 transition-colors',
               variant === 'solid'
-                ? 'min-h-[38px] py-2 text-subheadline font-semibold tracking-[-0.01em]'
-                : 'min-h-[32px] py-1.5 text-footnote font-semibold tracking-[0.01em]',
+                ? 'min-h-[40px] py-2 text-subheadline font-semibold tracking-[-0.01em]'
+                : 'min-h-[32px] py-2 text-footnote font-semibold tracking-[0.01em]',
               selected
                 ? variant === 'solid'
                   ? 'text-black'
@@ -76,7 +76,7 @@ export function SegmentedControl<T extends string>({
                 layoutId={layoutId}
                 aria-hidden
                 className={cn(
-                  'absolute inset-0 rounded-[9px]',
+                  'absolute inset-0 rounded-[10px]',
                   variant === 'solid' ? 'bg-white' : 'bg-white/12',
                 )}
                 transition={reduce ? reducedFade : spring.default}

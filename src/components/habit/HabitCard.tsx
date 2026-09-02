@@ -4,7 +4,7 @@ import { memo, useState } from 'react';
 import { motion, useReducedMotion, useMotionValue, animate } from 'framer-motion';
 import { Flame, Trash2, Clock, Lock } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { spring, reducedFade, chartHex, onChartHex, semantic } from '@/theme/theme';
+import { spring, reducedFade, chartHex, onChartHex, semantic, palette } from '@/theme/theme';
 import { formatHHmm } from '@/lib/dates';
 import { CompletionToggle } from './CompletionToggle';
 import { ContributionGrid } from '@/components/chart/ContributionGrid';
@@ -57,6 +57,9 @@ export const HabitCard = memo(function HabitCard({
   // stays legible on amber and on vermillion alike.
   const primaryText = done ? onAccent : semantic.labelPrimary;
   const mutedText = done ? onAccent : semantic.labelSecondary;
+  // White can't be dimmed on blue and still clear AA; black on the light
+  // hues can. So the muting opacity depends on which text colour we got.
+  const mute = done && onAccent === palette.ink0 ? 0.7 : 1;
 
   return (
     <div className="relative">
@@ -123,8 +126,8 @@ export const HabitCard = memo(function HabitCard({
           >
             {habit.categoryTag && (
               <p
-                className="font-data mb-1.5"
-                style={{ color: mutedText, opacity: done ? 0.7 : 1 }}
+                className="font-data mb-2"
+                style={{ color: mutedText, opacity: mute }}
               >
                 {habit.categoryTag}
               </p>
@@ -136,11 +139,11 @@ export const HabitCard = memo(function HabitCard({
               {habit.name}
             </p>
 
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
               {habit.streak > 0 && (
                 <span
                   className="inline-flex items-center gap-1 text-footnote"
-                  style={{ color: mutedText, opacity: done ? 0.75 : 1 }}
+                  style={{ color: mutedText, opacity: mute }}
                 >
                   <Flame size={13} aria-hidden />
                   <span className="tnum">{habit.streak}</span> day
@@ -152,7 +155,7 @@ export const HabitCard = memo(function HabitCard({
                   className="inline-flex items-center gap-1 text-footnote"
                   style={{
                     color: done ? mutedText : locked ? semantic.labelTertiary : semantic.warning,
-                    opacity: done ? 0.75 : 1,
+                    opacity: mute,
                   }}
                 >
                   {locked ? <Lock size={12} aria-hidden /> : <Clock size={12} aria-hidden />}
@@ -165,14 +168,14 @@ export const HabitCard = memo(function HabitCard({
           {/* Stat pattern: numeral over a tiny uppercase label. */}
           <div className="flex shrink-0 flex-col items-end">
             <span
-              className="font-display-hero text-[34px] leading-none"
+              className="font-display-hero text-[36px] leading-none"
               style={{ color: done ? onAccent : accent }}
             >
               {statValue ?? Math.round(habit.momentumScore)}
             </span>
             <span
-              className="font-data mt-1.5"
-              style={{ color: mutedText, opacity: done ? 0.7 : 1 }}
+              className="font-data mt-2"
+              style={{ color: mutedText, opacity: mute }}
             >
               {statLabel ?? 'Momentum'}
             </span>

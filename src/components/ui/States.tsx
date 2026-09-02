@@ -3,7 +3,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
 import { Button } from './Button';
-import { Starburst } from './Starburst';
+import { StarburstSolid } from './Starburst';
 import { cn } from '@/lib/cn';
 
 /**
@@ -39,13 +39,17 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex flex-col items-start gap-5 rounded-[var(--radius-card)] bg-bg-secondary px-6 py-10',
+        'flex flex-col items-start gap-6 rounded-[var(--radius-card)] bg-tint px-6 py-8 text-white',
         className,
       )}
     >
-      <Starburst size={40} className="text-ink5" strokeWidth={2} />
-      <p className="max-w-[34ch] text-body leading-relaxed text-label-secondary">{message}</p>
-      {actionLabel && onAction && <Button onClick={onAction}>{actionLabel}</Button>}
+      <StarburstSolid size={44} className="text-white" />
+      <p className="max-w-[30ch] font-display text-[24px] leading-[1.1]">{message}</p>
+      {actionLabel && onAction && (
+        <Button onClick={onAction} className="bg-white text-black hover:bg-white">
+          {actionLabel}
+        </Button>
+      )}
     </div>
   );
 }

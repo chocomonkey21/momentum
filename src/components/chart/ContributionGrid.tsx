@@ -115,7 +115,7 @@ export function ContributionGrid({
               {monthMarks.map((m) => (
                 <span
                   key={`${m.index}-${m.label}`}
-                  className="font-data absolute top-0 text-[9px] text-label-tertiary"
+                  className="font-data absolute top-0 text-[10px] text-label-tertiary"
                   style={{ left: m.index * step }}
                 >
                   {m.label}
@@ -130,7 +130,7 @@ export function ContributionGrid({
                 {DAY_LABELS.map((d, i) => (
                   <span
                     key={i}
-                    className="font-data text-[9px] leading-none text-label-tertiary"
+                    className="font-data text-[10px] leading-none text-label-tertiary"
                     style={{ height: cell, lineHeight: `${cell}px`, width: 10 }}
                   >
                     {d}
@@ -175,8 +175,8 @@ export function ContributionGrid({
 export function ContributionLegend({ color }: { color: ChartColor }) {
   const ramp = contributionRamp(color);
   return (
-    <div className="flex items-center gap-1.5" aria-hidden>
-      <span className="font-data text-[9px] text-label-tertiary">Less</span>
+    <div className="flex items-center gap-1" aria-hidden>
+      <span className="font-data text-[10px] text-label-tertiary">Less</span>
       {ramp.map((c, i) => (
         <span
           key={i}
@@ -184,7 +184,7 @@ export function ContributionLegend({ color }: { color: ChartColor }) {
           style={{ backgroundColor: c }}
         />
       ))}
-      <span className="font-data text-[9px] text-label-tertiary">More</span>
+      <span className="font-data text-[10px] text-label-tertiary">More</span>
     </div>
   );
 }

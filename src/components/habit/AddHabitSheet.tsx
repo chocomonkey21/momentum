@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { z } from 'zod';
 import { cn } from '@/lib/cn';
-import { spring, reducedFade } from '@/theme/theme';
+import { spring, reducedFade, categoryHue, chartHex, onChartHex } from '@/theme/theme';
 import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
@@ -130,7 +130,7 @@ export function AddHabitSheet({
     >
       <div className="flex flex-col gap-6">
         <div>
-          <label htmlFor="habit-name" className="font-data mb-2 block text-[10px] text-label-tertiary">
+          <label htmlFor="habit-name" className="font-data mb-2 block text-label-tertiary">
             Habit name
           </label>
           <input
@@ -155,9 +155,9 @@ export function AddHabitSheet({
             aria-invalid={Boolean(error)}
             aria-describedby={error ? 'habit-name-error' : undefined}
             className={cn(
-              'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-3.5',
-              'text-body text-label-primary placeholder:text-label-tertiary',
-              'border transition-colors duration-150',
+              'w-full rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-4',
+              'font-display text-[22px] text-label-primary placeholder:text-label-tertiary',
+              'border-2 transition-colors duration-150',
               error ? 'border-destructive' : 'border-transparent focus:border-tint',
               shake && 'shake',
             )}
@@ -196,16 +196,36 @@ export function AddHabitSheet({
         </Fieldset>
 
         <Fieldset legend="Category">
-          {CATEGORIES.map((c) => (
-            <Chip
-              key={c}
-              selected={category === c}
-              dimmed
-              onSelect={() => setCategory(category === c ? null : c)}
-            >
-              {c}
-            </Chip>
-          ))}
+          {/* Category chips fill with the category's own hue — the same
+              colour the habit will carry on its card and in its charts. */}
+          {CATEGORIES.map((c) => {
+            const on = category === c;
+            const hue = categoryHue(c);
+            return (
+              <motion.button
+                key={c}
+                type="button"
+                role="checkbox"
+                aria-checked={on}
+                onClick={() => setCategory(on ? null : c)}
+                whileTap={reduce ? { opacity: 0.7 } : { scale: 0.96 }}
+                transition={reduce ? reducedFade : spring.default}
+                className={cn(
+                  'inline-flex min-h-[44px] items-center gap-2 rounded-[var(--radius-pill)] px-4',
+                  'font-display text-[15px] uppercase tracking-[0.04em] transition-colors',
+                  !on && 'bg-bg-tertiary text-label-secondary hover:text-label-primary',
+                )}
+                style={on ? { backgroundColor: chartHex(hue), color: onChartHex(hue) } : undefined}
+              >
+                <span
+                  aria-hidden
+                  className="size-2.5 rounded-full"
+                  style={{ backgroundColor: on ? 'currentColor' : chartHex(hue) }}
+                />
+                {c}
+              </motion.button>
+            );
+          })}
         </Fieldset>
 
         {/* Optional, visually secondary, collapsed by default (ui-spec.md §7). */}
@@ -221,7 +241,7 @@ export function AddHabitSheet({
               type="checkbox"
               checked={constraintOn}
               onChange={(e) => setConstraintOn(e.target.checked)}
-              className="size-6 accent-[var(--color-tint)]"
+              className="toggle"
             />
           </label>
 
@@ -244,7 +264,7 @@ export function AddHabitSheet({
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
                     className={cn(
-                      'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-3.5',
+                      'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-4',
                       'text-body text-label-primary [color-scheme:dark]',
                       'border border-transparent focus:border-tint',
                     )}
@@ -266,7 +286,7 @@ export function AddHabitSheet({
 function Fieldset({ legend, children }: { legend: string; children: React.ReactNode }) {
   return (
     <fieldset>
-      <legend className="font-data mb-2.5 text-[10px] text-label-tertiary">{legend}</legend>
+      <legend className="font-data mb-3 text-label-tertiary">{legend}</legend>
       <div className="flex flex-wrap gap-2">{children}</div>
     </fieldset>
   );

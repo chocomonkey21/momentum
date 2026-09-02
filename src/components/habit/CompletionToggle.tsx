@@ -90,7 +90,7 @@ export function CompletionToggle({
           press();
         }
       }}
-      animate={pulse ? { scale: [1, 1.16, 1] } : { scale: 1 }}
+      animate={pulse ? { scale: [1.16, 1] } : { scale: 1 }}
       transition={reduce ? reducedFade : spring.bouncy}
       whileHover={reduce ? undefined : { scale: 1.05 }}
       className="relative inline-flex shrink-0 items-center justify-center border-2 transition-colors duration-200"

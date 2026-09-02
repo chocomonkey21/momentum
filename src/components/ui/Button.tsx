@@ -16,9 +16,9 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANTS: Record<Variant, string> = {
   primary: 'bg-tint text-white hover:brightness-110',
-  secondary: 'bg-bg-secondary text-label-primary hover:bg-bg-tertiary',
-  outlined: 'bg-transparent text-label-primary border border-white/15 hover:border-white/30',
-  destructive: 'bg-transparent text-destructive hover:bg-destructive/10',
+  secondary: 'bg-bg-tertiary text-label-primary hover:bg-ink5',
+  outlined: 'bg-transparent text-label-primary border-2 border-white/20 hover:border-white/40',
+  destructive: 'bg-destructive text-white hover:brightness-110',
 };
 
 /**
@@ -42,8 +42,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       transition={reduce ? reducedFade : spring.default}
       className={cn(
         // Pill — the roundest thing in the system, because it is the thing you press.
-        'inline-flex min-h-[50px] items-center justify-center gap-2 rounded-[var(--radius-pill)] px-7',
-        'text-[length:var(--text-body)] font-semibold transition-colors',
+        'inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[var(--radius-pill)] px-7',
+        // Condensed-bold uppercase label: the button reads as a badge you
+        // press, which is the playful register the whole app now speaks in.
+        'font-display text-[17px] uppercase tracking-[0.04em] transition-colors',
         // Disabled is visually distinct, not merely non-functional (CLAUDE.md §14).
         'disabled:cursor-not-allowed disabled:opacity-40',
         VARIANTS[variant],

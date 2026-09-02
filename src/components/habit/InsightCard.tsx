@@ -69,7 +69,7 @@ export function AdaptiveDifficultyBanner({
         <div className="rounded-[var(--radius-card)] border border-warning/30 bg-warning/10 p-5">
           <div className="flex items-start gap-3">
             {/* Warning, not destructive — a dip is not an error (design-system.md §1.2). */}
-            <TrendingDown size={20} className="mt-0.5 shrink-0 text-warning" aria-hidden />
+            <TrendingDown size={20} className="mt-1 shrink-0 text-warning" aria-hidden />
             <div className="min-w-0 flex-1">
               <p className="text-headline font-semibold">Scale this one down?</p>
               <p className="mt-1 text-subheadline text-label-secondary">

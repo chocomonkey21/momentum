@@ -11,7 +11,7 @@ import { MomentumChart } from '@/components/chart/MomentumChart';
 import { InsightCard } from '@/components/habit/InsightCard';
 import { aggregateInsight, MIN_LOGS_FOR_INSIGHT } from '@/lib/insights';
 import { momentumBand } from '@/lib/momentum';
-import { chartHex, onChartHex, semantic } from '@/theme/theme';
+import { chartHex, onChartHex, semantic, palette } from '@/theme/theme';
 import { Stat } from '@/components/ui/Stat';
 
 type Range = 'week' | 'year';
@@ -46,7 +46,7 @@ export default function StatsPage() {
   if (status === 'error') {
     return (
       <Screen width="wide">
-        <ScreenHeader title="Your Progress" />
+        <ScreenHeader title="Your progress" />
         <ErrorState message={errorMessage ?? 'Something went wrong.'} onRetry={retry} />
       </Screen>
     );
@@ -55,7 +55,7 @@ export default function StatsPage() {
   return (
     <Screen width="wide">
       <PageFade>
-        <ScreenHeader title="Your Progress" />
+        <ScreenHeader title="Your progress" eyebrow="Statistics" />
 
         {status === 'loading' ? (
           <div className="flex flex-col gap-6">
@@ -76,18 +76,26 @@ export default function StatsPage() {
             <div>
               {/* The one hero number on this screen, in the app-wide stat
                   pattern: giant numeral, tiny uppercase label beneath. */}
-              <section className="mb-6">
+              <section
+                className="mb-4 rounded-[var(--radius-card)] p-6"
+                // Strong momentum earns the green block; otherwise tint blue.
+                style={{
+                  backgroundColor:
+                    momentumBand(overall) === 'strong' ? semantic.positive : semantic.tint,
+                  color: momentumBand(overall) === 'strong' ? palette.ink0 : palette.white,
+                }}
+              >
                 <Stat
                   size="xl"
                   value={overall}
                   label={`Overall momentum · ${habits.length} habit${habits.length === 1 ? '' : 's'}`}
-                  valueColor={
-                    momentumBand(overall) === 'strong' ? semantic.positive : semantic.labelPrimary
+                  labelClassName={
+                    momentumBand(overall) === 'strong' ? '!text-current opacity-70' : '!text-current'
                   }
                 />
               </section>
 
-              <div className="mb-4 max-w-xs">
+              <div className="mb-4">
                 <SegmentedControl
                   options={RANGES}
                   value={range}

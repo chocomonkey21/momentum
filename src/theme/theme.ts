@@ -40,8 +40,8 @@ export const semantic = {
   bgTertiary: palette.ink4,
   bgElevated: palette.ink3,
   labelPrimary: palette.white,
-  labelSecondary: palette.ink7,
-  labelTertiary: palette.ink6,
+  labelSecondary: palette.ink8,
+  labelTertiary: palette.ink7,
   separator: 'rgba(255,255,255,0.07)',
 } as const;
 
@@ -88,8 +88,9 @@ export function chartHex(c: ChartColor): string {
 /** Text colour that stays legible on a solid fill of the given habit hue. */
 export function onChartHex(c: ChartColor): string {
   const n = normalizeChartColor(c);
-  // Light hues take black text; the two dark ones take white.
-  return n === 'amber' || n === 'orange' || n === 'cyan' ? palette.ink0 : palette.white;
+  // Black text everywhere except blue: white on vermillion is only 3.6:1,
+  // black on it is 5.9:1. Blue is the one hue that needs white (4.6:1).
+  return n === 'blue' ? palette.white : palette.ink0;
 }
 
 /**
@@ -155,3 +156,27 @@ export const NAV = {
   bottomClearance: 80,
   sidebarWidth: 240,
 } as const;
+
+/**
+ * Category → hue, for surfaces that colour by category rather than by habit
+ * (onboarding tiles, the Add Habit category picker). Stable by name, cycling
+ * the curated set, so "Fitness" is the same amber everywhere it appears.
+ */
+const CATEGORY_HUES: Record<string, ChartColor> = {
+  Fitness: 'amber',
+  Study: 'orange',
+  Health: 'vermillion',
+  Creativity: 'blue',
+  Mind: 'cyan',
+  Lifestyle: 'amber',
+  Work: 'orange',
+};
+export function categoryHue(name: string | null | undefined): ChartColor {
+  if (!name) return 'blue';
+  return CATEGORY_HUES[name] ?? CHART_COLORS[Math.abs(hashString(name)) % CHART_COLORS.length];
+}
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h;
+}

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Lock, Check, X } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/cn';
-import { spring, reducedFade, MOOD_COLORS, MOOD_LABELS } from '@/theme/theme';
+import { spring, reducedFade, MOOD_COLORS, MOOD_LABELS, semantic, palette } from '@/theme/theme';
 import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
@@ -116,7 +116,7 @@ export function LogHabitSheet({
               'text-footnote text-label-secondary',
             )}
           >
-            <Lock size={14} className="mt-0.5 shrink-0" aria-hidden />
+            <Lock size={14} className="mt-1 shrink-0" aria-hidden />
             <span>
               Logging closed — deadline was{' '}
               {habit.timeConstraint ? formatHHmm(habit.timeConstraint) : 'earlier today'}. You can
@@ -128,7 +128,7 @@ export function LogHabitSheet({
         {/* Mood — 5-point scale (data-model.md §3). Still available on a skip:
             "skipped, felt tired, at home" is a meaningful data point. */}
         <fieldset>
-          <legend className="font-data mb-2.5 text-[10px] text-label-tertiary">How did it feel?</legend>
+          <legend className="font-data mb-3 text-label-tertiary">How did it feel?</legend>
           <div className="flex flex-wrap gap-2">
             {([1, 2, 3, 4, 5] as MoodTag[]).map((m) => {
               const selected = mood === m;
@@ -143,18 +143,26 @@ export function LogHabitSheet({
                   whileTap={reduce ? { opacity: 0.7 } : { scale: 0.94 }}
                   transition={reduce ? reducedFade : spring.default}
                   className={cn(
-                    'flex min-h-[44px] flex-1 flex-col items-center justify-center gap-1.5',
-                    'rounded-[var(--radius-block)] px-2 py-2 transition-colors',
-                    selected ? 'bg-bg-tertiary' : 'bg-bg-secondary hover:bg-bg-tertiary',
-                    mood !== null && !selected && 'opacity-60',
+                    'flex min-h-[72px] flex-1 flex-col items-center justify-center gap-2',
+                    'rounded-[var(--radius-block)] px-1 py-3 transition-colors',
+                    mood !== null && !selected && 'opacity-50',
                   )}
+                  // The selected mood fills its whole cell with its colour.
+                  style={{ backgroundColor: selected ? MOOD_COLORS[m] : semantic.bgTertiary }}
                 >
                   <span
                     aria-hidden
-                    className={cn('size-6 rounded-[8px] transition-transform', selected && 'scale-110')}
-                    style={{ backgroundColor: MOOD_COLORS[m] }}
+                    className="size-6 rounded-[8px]"
+                    style={{
+                      backgroundColor: selected ? 'rgba(0,0,0,0.25)' : MOOD_COLORS[m],
+                    }}
                   />
-                  <span className="font-data text-[9px] text-label-tertiary">{MOOD_LABELS[m]}</span>
+                  <span
+                    className="font-data"
+                    style={{ color: selected ? palette.ink0 : semantic.labelSecondary }}
+                  >
+                    {MOOD_LABELS[m]}
+                  </span>
                 </motion.button>
               );
             })}
@@ -162,7 +170,7 @@ export function LogHabitSheet({
         </fieldset>
 
         <fieldset>
-          <legend className="font-data mb-2.5 text-[10px] text-label-tertiary">Where were you?</legend>
+          <legend className="font-data mb-3 text-label-tertiary">Where were you?</legend>
           <div className="flex flex-wrap gap-2">
             {CONTEXTS.map((c) => (
               <Chip
@@ -178,7 +186,7 @@ export function LogHabitSheet({
         </fieldset>
 
         <div>
-          <label htmlFor="log-notes" className="font-data mb-2 block text-[10px] text-label-tertiary">
+          <label htmlFor="log-notes" className="font-data mb-2 block text-label-tertiary">
             Notes (optional)
           </label>
           <textarea
@@ -189,7 +197,7 @@ export function LogHabitSheet({
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Anything worth remembering about today?"
             className={cn(
-              'w-full resize-none rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-3.5',
+              'w-full resize-none rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-4',
               'text-body text-label-primary placeholder:text-label-tertiary',
               'border border-transparent transition-colors focus:border-tint',
             )}
@@ -246,12 +254,12 @@ function BigToggle({
       whileTap={disabled || reduce ? undefined : { scale: 0.97 }}
       transition={reduce ? reducedFade : spring.default}
       className={cn(
-        'flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[var(--radius-card)]',
-        'font-display text-[17px] transition-colors',
+        'flex min-h-[96px] flex-col items-center justify-center gap-2 rounded-[var(--radius-card)]',
+        'font-display text-[17px] uppercase tracking-[0.04em] transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-40',
         selected && tone === 'positive' && 'bg-positive text-black',
-        selected && tone === 'neutral' && 'bg-bg-tertiary text-label-primary',
-        !selected && 'bg-bg-secondary text-label-secondary hover:bg-bg-tertiary',
+        selected && tone === 'neutral' && 'bg-white text-black',
+        !selected && 'bg-bg-tertiary text-label-secondary hover:text-label-primary',
       )}
     >
       {icon}

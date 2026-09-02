@@ -51,10 +51,10 @@ export function ScreenHeader({
   className?: string;
 }) {
   return (
-    <header className={cn('mb-6 flex items-start justify-between gap-4', className)}>
+    <header className={cn('mb-8 flex items-start justify-between gap-4', className)}>
       <div className="min-w-0">
         {eyebrow && <p className="font-data mb-2 text-[10px] text-label-tertiary">{eyebrow}</p>}
-        <h1 className="font-display text-large-title leading-[1.05]">{title}</h1>
+        <h1 className="font-display text-[40px] leading-[0.98]">{title}</h1>
       </div>
       {action}
     </header>
@@ -84,7 +84,7 @@ export function PushedHeader({
       >
         <ChevronLeft size={24} aria-hidden />
       </IconButton>
-      <h1 className="font-display min-w-0 flex-1 truncate text-large-title leading-[1.05]">{title}</h1>
+      <h1 className="font-display min-w-0 flex-1 truncate text-[32px] leading-[1.02]">{title}</h1>
       {action}
     </header>
   );

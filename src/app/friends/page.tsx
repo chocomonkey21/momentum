@@ -106,8 +106,8 @@ export default function FriendsPage() {
                           username={f.username}
                           colorIndex={i}
                           trailing={
-                            <span className="inline-flex items-center gap-1.5 text-footnote text-label-secondary">
-                              <Clock size={13} aria-hidden />
+                            <span className="font-data inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-bg-tertiary px-3 py-2 text-label-secondary">
+                              <Clock size={12} aria-hidden />
                               Pending
                             </span>
                           }
@@ -128,8 +128,8 @@ export default function FriendsPage() {
                         username={f.username}
                         colorIndex={i}
                         trailing={
-                          <span className="inline-flex items-center gap-1.5 text-footnote text-positive">
-                            <Check size={13} aria-hidden />
+                          <span className="font-data inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-positive px-3 py-2 text-black">
+                            <Check size={12} strokeWidth={3} aria-hidden />
                             Friends
                           </span>
                         }
@@ -149,20 +149,26 @@ export default function FriendsPage() {
           <ul className="flex flex-col gap-4">
             {challengeRows.map((challenge) => (
               <li key={challenge.id}>
-                <section className="rounded-[var(--radius-card)] bg-bg-secondary p-5">
-                  <div className="mb-1 flex items-start gap-3">
-                    <Trophy size={20} className="mt-0.5 shrink-0 text-warning" aria-hidden />
+                <section className="overflow-hidden rounded-[var(--radius-card)] bg-bg-secondary">
+                  {/* Amber header block: the challenge is the prize. */}
+                  <div
+                    className="flex items-start gap-3 p-5"
+                    style={{ backgroundColor: palette.amber, color: palette.ink0 }}
+                  >
                     <div className="min-w-0 flex-1">
-                      <h2 className="font-display text-[17px]">{challenge.challengeName}</h2>
-                      <p className="mt-0.5 text-footnote text-label-secondary">
-                        {challenge.goalMetric} ·{' '}
+                      <p className="font-data opacity-70">{challenge.goalMetric}</p>
+                      <h2 className="font-display mt-1 text-[24px] leading-tight">
+                        {challenge.challengeName}
+                      </h2>
+                      <p className="font-data mt-2 opacity-70">
                         {format(new Date(challenge.startDate + 'T00:00:00'), 'd MMM')} –{' '}
                         {format(new Date(challenge.endDate + 'T00:00:00'), 'd MMM')}
                       </p>
                     </div>
+                    <Trophy size={22} className="shrink-0" aria-hidden />
                   </div>
 
-                  <ol className="mt-4 flex flex-col gap-2">
+                  <ol className="flex flex-col gap-3 p-5">
                     {challenge.board.map((p, rank) => {
                       const isYou = p.userId === userId;
                       const max = challenge.board[0]?.progress || 1;
@@ -171,11 +177,11 @@ export default function FriendsPage() {
                           <div className="flex items-center gap-3">
                             <span
                               className={cn(
-                                'w-5 shrink-0 text-center text-footnote tabular-nums',
-                                rank === 0 ? 'text-warning' : 'text-label-secondary',
+                                'font-display-hero w-6 shrink-0 text-center text-[18px]',
+                                rank === 0 ? 'text-app-amber' : 'text-label-tertiary',
                               )}
                             >
-                              {rank === 0 ? <Medal size={14} className="mx-auto" aria-hidden /> : rank + 1}
+                              {rank === 0 ? <Medal size={16} className="mx-auto" aria-hidden /> : rank + 1}
                             </span>
                             <span
                               className={cn(
@@ -222,7 +228,7 @@ export default function FriendsPage() {
       >
         <div className="flex flex-col gap-4">
           <div>
-            <label htmlFor="friend-username" className="mb-2 block text-subheadline text-label-secondary">
+            <label htmlFor="friend-username" className="font-data mb-2 block text-label-tertiary">
               Username
             </label>
             <input
@@ -231,9 +237,9 @@ export default function FriendsPage() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="priya"
               className={cn(
-                'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-3.5',
-                'text-body text-label-primary placeholder:text-label-tertiary',
-                'border border-transparent transition-colors focus:border-tint',
+                'w-full rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-4',
+                'font-display text-[22px] text-label-primary placeholder:text-label-tertiary',
+                'border-2 border-transparent transition-colors focus:border-tint',
               )}
             />
           </div>
@@ -273,7 +279,7 @@ function FriendRowItem({
   const color = AVATAR_COLORS[colorIndex % AVATAR_COLORS.length];
   const initial = name.trim().charAt(0).toUpperCase() || '?';
   return (
-    <div className="flex min-h-[44px] items-center gap-3 rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3.5">
+    <div className="flex min-h-[44px] items-center gap-3 rounded-[var(--radius-block)] bg-bg-secondary px-4 py-4">
       <span
         aria-hidden
         className="font-display inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-block)] text-[17px] text-black"

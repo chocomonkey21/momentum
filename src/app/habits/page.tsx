@@ -81,7 +81,14 @@ function HabitsScreen() {
     <Screen>
       <PageFade>
         <ScreenHeader
-          title={view === 'habits' ? 'Your Habits' : 'Habit Chains'}
+          title={view === 'habits' ? 'Your habits' : 'Habit chains'}
+          eyebrow={
+            status === 'loading'
+              ? undefined
+              : view === 'habits'
+                ? `${habits.length} active`
+                : 'Habits you do together'
+          }
           action={
             <IconButton
               label={view === 'habits' ? 'Add a habit' : 'Create a new chain'}
@@ -89,7 +96,7 @@ function HabitsScreen() {
                 view === 'habits' ? setAddOpen(true) : setNewChainSignal((n) => n + 1)
               }
             >
-              <Plus size={24} aria-hidden />
+              <Plus size={22} aria-hidden />
             </IconButton>
           }
         />

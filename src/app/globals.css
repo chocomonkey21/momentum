@@ -44,8 +44,11 @@
   --color-bg-elevated: var(--color-ink-3);
 
   --color-label-primary: #ffffff;
-  --color-label-secondary: var(--color-ink-7);
-  --color-label-tertiary: var(--color-ink-6);
+  /* ink8 / ink7, not ink7 / ink6: the previous pair put label.tertiary at
+     2.7:1 on the canvas. These clear AA on every surface in the ramp
+     (ink8 ≥ 8.9:1, ink7 ≥ 4.6:1 on ink4). */
+  --color-label-secondary: var(--color-ink-8);
+  --color-label-tertiary: var(--color-ink-7);
   --color-separator: rgba(255, 255, 255, 0.07);
 
   /* --- Radius: a deliberate hierarchy, not one value everywhere ------
@@ -166,4 +169,34 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .skeleton { animation: none; opacity: 0.6; }
   .shake { animation: none; }
+}
+
+/* ---- Toggle: a native checkbox drawn as a pill switch -------------- */
+.toggle {
+  appearance: none;
+  position: relative;
+  width: 52px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-ink-5);
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  background-color: #ffffff;
+  transition: transform 200ms ease;
+}
+.toggle:checked { background-color: var(--color-app-green); }
+.toggle:checked::after { transform: translateX(20px); }
+.toggle:disabled { opacity: 0.4; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) {
+  .toggle, .toggle::after { transition: none; }
 }

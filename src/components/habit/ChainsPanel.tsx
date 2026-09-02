@@ -9,7 +9,8 @@ import { EmptyState, Skeleton } from '@/components/ui/States';
 import { ChainBuilder } from '@/components/habit/ChainBuilder';
 import { deleteChain, createChain, saveChainMembers, renameChain } from '@/db/queries';
 import { cn } from '@/lib/cn';
-import { chartHex, semantic } from '@/theme/theme';
+import { spring } from '@/theme/theme';
+import { chartHex, onChartHex, semantic, palette } from '@/theme/theme';
 import { todayKey } from '@/lib/dates';
 
 /**
@@ -89,51 +90,49 @@ export function ChainsPanel({
             {chainViews.map(({ chain, members, done, total, complete }) => (
               <li key={chain.id}>
                 <motion.div
-                  // Chain-complete celebration: a light tint of color.positive
-                  // that fades back (interaction-spec.md §11).
-                  animate={
-                    complete && !reduce
-                      ? { backgroundColor: ['rgba(48,209,88,0.18)', 'rgba(28,28,30,1)'] }
-                      : {}
-                  }
-                  transition={{ duration: 0.6, ease: 'easeOut' }}
-                  className={cn(
-                    'group rounded-[var(--radius-card)] bg-bg-secondary p-5 transition-colors',
-                    complete && 'ring-1 ring-positive/40',
-                  )}
+                  // Chain-complete celebration (interaction-spec.md §11): the
+                  // whole card becomes a solid block of colour.positive, on the
+                  // bouncy spring — one of the few earned bounces in the app.
+                  animate={{ scale: complete && !reduce ? [0.97, 1] : 1 }}
+                  transition={reduce ? { duration: 0.15 } : spring.bouncy}
+                  className="group rounded-[var(--radius-card)] p-5 transition-colors"
+                  style={{
+                    backgroundColor: complete ? semantic.positive : semantic.bgSecondary,
+                    color: complete ? palette.ink0 : palette.white,
+                  }}
                 >
-                  <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="mb-5 flex items-start justify-between gap-3">
                     <button
                       type="button"
                       onClick={() => setBuilderFor(chain.id ?? null)}
                       className="min-w-0 flex-1 text-left"
                       aria-label={`Edit chain ${chain.chainName}, ${done} of ${total} complete today`}
                     >
-                      <p className="truncate text-headline font-semibold">{chain.chainName}</p>
-                      <p className="mt-0.5 text-footnote text-label-secondary">
-                        {total === 0
-                          ? 'No habits in this chain yet'
-                          : complete
-                            ? 'Complete for today'
-                            : `${done} of ${total} complete today`}
+                      <p className="font-display truncate text-[22px] leading-tight">{chain.chainName}</p>
+                      {/* Stat pattern: done / total, then the label. */}
+                      <div className="mt-3 flex items-baseline gap-1">
+                        <span className="font-display-hero text-[40px] leading-none">{done}</span>
+                        <span className="font-display-hero text-[20px] leading-none opacity-50">/{total}</span>
+                      </div>
+                      <p className="font-data mt-2 opacity-70">
+                        {total === 0 ? 'No habits yet' : complete ? 'Complete for today' : 'Complete today'}
                       </p>
                     </button>
 
                     <div className="flex items-center gap-2">
                       {complete && (
                         <span
-                          className="inline-flex size-7 items-center justify-center rounded-full"
-                          style={{ backgroundColor: semantic.positive }}
+                          className="inline-flex size-9 items-center justify-center rounded-[var(--radius-pill)] bg-black/15"
                           aria-hidden
                         >
-                          <Check size={16} className="text-black" />
+                          <Check size={18} strokeWidth={3} />
                         </span>
                       )}
                       {/* Chain deletion needs NO confirmation — it removes only
                           the grouping, not any habit or log (user-flows.md §8). */}
                       <IconButton
                         label={`Delete chain ${chain.chainName}`}
-                        className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                        className="text-current opacity-0 transition-opacity hover:bg-black/10 focus-visible:opacity-100 group-hover:opacity-100"
                         onClick={async () => {
                           if (!chain.id) return;
                           const name = chain.chainName;
@@ -159,19 +158,25 @@ export function ChainsPanel({
                         <li key={habit.id} className="flex items-center gap-2">
                           <span
                             className={cn(
-                              'inline-flex items-center gap-1.5 rounded-[var(--radius-block)] px-3 py-1.5',
-                              'text-footnote transition-colors',
-                              isDone ? 'text-black' : 'bg-bg-tertiary text-label-primary',
+                              'inline-flex min-h-[36px] items-center gap-2 rounded-[var(--radius-pill)] px-3',
+                              'text-footnote font-medium transition-colors',
                             )}
                             style={
-                              isDone ? { backgroundColor: chartHex(habit.chartColor) } : undefined
+                              isDone
+                                ? complete
+                                  ? { backgroundColor: 'rgba(0,0,0,0.15)', color: palette.ink0 }
+                                  : {
+                                      backgroundColor: chartHex(habit.chartColor),
+                                      color: onChartHex(habit.chartColor),
+                                    }
+                                : { backgroundColor: semantic.bgTertiary, color: palette.white }
                             }
                           >
-                            {isDone && <Check size={12} aria-hidden />}
+                            {isDone && <Check size={12} strokeWidth={3} aria-hidden />}
                             {habit.name}
                           </span>
                           {i < members.length - 1 && (
-                            <ArrowRight size={14} className="text-label-secondary" aria-hidden />
+                            <ArrowRight size={14} className="opacity-50" aria-hidden />
                           )}
                         </li>
                       );
@@ -183,7 +188,7 @@ export function ChainsPanel({
           </ul>
 
           <div className="mt-5">
-            <Button variant="outlined" fullWidth onClick={() => setBuilderFor('new')}>
+            <Button variant="secondary" fullWidth onClick={() => setBuilderFor('new')}>
               <Plus size={18} aria-hidden />
               New Chain
             </Button>

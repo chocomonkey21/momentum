@@ -73,23 +73,32 @@ export function BottomTabBar() {
         'border-t border-white/10 bg-black/85 backdrop-blur-xl',
       )}
     >
-      <ul className="mx-auto flex max-w-2xl items-stretch justify-around">
+      <ul className="mx-auto flex items-center justify-between px-3 py-2">
         {items.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;
           return (
-            <li key={item.href} className="flex-1">
+            <li key={item.href}>
+              {/* The active tab is a solid white pill with its label beside the
+                  icon; inactive tabs are icon-only with the label available to
+                  assistive tech. One filled pill, four quiet glyphs. */}
               <Link
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
+                aria-label={item.label}
                 className={cn(
-                  'flex min-h-[64px] flex-col items-center justify-center gap-1 px-1 py-2',
-                  'text-[length:var(--text-caption1)] transition-colors',
-                  active ? 'text-tint' : 'text-label-secondary hover:text-white',
+                  'flex min-h-[44px] items-center gap-2 rounded-[var(--radius-pill)] transition-colors',
+                  active
+                    ? 'bg-white px-4 text-black'
+                    : 'px-3 text-label-secondary hover:bg-bg-tertiary hover:text-white',
                 )}
               >
-                <Icon size={22} strokeWidth={active ? 2.5 : 2} aria-hidden />
-                <span>{item.label}</span>
+                <Icon size={20} strokeWidth={2} aria-hidden />
+                {active && (
+                  <span className="font-display text-[14px] uppercase tracking-[0.04em]">
+                    {item.label}
+                  </span>
+                )}
               </Link>
             </li>
           );

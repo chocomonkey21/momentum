@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
-import { Starburst } from '@/components/ui/Starburst';
+import { StarburstSolid } from '@/components/ui/Starburst';
 import { cn } from '@/lib/cn';
 import { spring, reducedFade } from '@/theme/theme';
 
@@ -94,7 +94,7 @@ export default function LoginPage() {
         // product read as a template.
         className="flex flex-1 flex-col justify-center"
       >
-        <Starburst size={56} className="mb-10 text-tint" strokeWidth={2.5} />
+        <StarburstSolid size={56} className="mb-10 text-app-amber" />
         <h1 className="font-wordmark leading-none">MOMENTUM</h1>
         <p className="mt-4 max-w-[30ch] text-body leading-relaxed text-label-secondary">
           Build better days. Miss one and your progress dips — it doesn&rsquo;t disappear.
@@ -115,7 +115,7 @@ export default function LoginPage() {
                 setNotice(null);
               }}
               className={cn(
-                'flex-1 rounded-[var(--radius-pill)] py-3.5 text-subheadline font-semibold transition-colors',
+                'flex-1 rounded-[var(--radius-pill)] py-4 text-subheadline font-semibold transition-colors',
                 mode === m ? 'bg-white text-black' : 'bg-bg-tertiary text-label-secondary',
               )}
             >
@@ -133,7 +133,7 @@ export default function LoginPage() {
               transition={reduce ? reducedFade : spring.default}
               className="overflow-hidden"
             >
-              <label htmlFor="name" className="font-data mb-2 block text-[10px] text-label-tertiary">
+              <label htmlFor="name" className="font-data mb-2 block text-label-tertiary">
                 Your name
               </label>
               <input
@@ -149,7 +149,7 @@ export default function LoginPage() {
         </AnimatePresence>
 
         <div>
-          <label htmlFor="email" className="font-data mb-2 block text-[10px] text-label-tertiary">
+          <label htmlFor="email" className="font-data mb-2 block text-label-tertiary">
             Email
           </label>
           <input
@@ -165,7 +165,7 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label htmlFor="password" className="font-data mb-2 block text-[10px] text-label-tertiary">
+          <label htmlFor="password" className="font-data mb-2 block text-label-tertiary">
             Password
           </label>
           <input
@@ -202,7 +202,7 @@ export default function LoginPage() {
 }
 
 const fieldClass = cn(
-  'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-3.5',
+  'w-full rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-4',
   'text-body text-label-primary placeholder:text-label-tertiary',
-  'border border-transparent transition-colors focus:border-tint',
+  'border-2 border-transparent transition-colors focus:border-tint',
 );

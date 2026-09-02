@@ -43,13 +43,13 @@ export function Chip({
       transition={reduce ? reducedFade : spring.default}
       className={cn(
         'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-[var(--radius-pill)]',
-        'px-5 text-[length:var(--text-subheadline)] font-medium transition-colors',
+        'px-5 font-display text-[15px] uppercase tracking-[0.04em] transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-40',
         selected
-          ? 'bg-white font-semibold text-black'
-          : 'bg-bg-tertiary text-label-secondary hover:text-label-primary',
+          ? 'bg-white text-black'
+          : 'bg-bg-tertiary text-label-secondary hover:bg-ink5 hover:text-label-primary',
         !selected && dimmed && 'opacity-70',
-        block && 'w-full justify-start rounded-[var(--radius-block)] px-5 text-left',
+        block && 'w-full justify-start rounded-[var(--radius-block)] px-4 text-left normal-case tracking-normal font-sans text-[16px] font-medium',
         className,
       )}
     >
