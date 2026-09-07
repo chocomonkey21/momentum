@@ -12,6 +12,7 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { getFriends, getChallenges, requestFriendByUsername, type FriendRow, type ChallengeBoard } from '@/db/queries';
 import { cn } from '@/lib/cn';
 import { palette } from '@/theme/theme';
+import { getUsernameValidationError } from '@/lib/validation';
 
 type Tab = 'friends' | 'challenges';
 
@@ -35,6 +36,7 @@ export default function FriendsPage() {
   const [tab, setTab] = useState<Tab>('friends');
   const [addOpen, setAddOpen] = useState(false);
   const [username, setUsername] = useState('');
+  const [usernameError, setUsernameError] = useState<string | null>(null);
 
   const [friends, setFriends] = useState<FriendRow[] | null>(null);
   const [challengeRows, setChallengeRows] = useState<ChallengeBoard[] | null>(null);
@@ -258,24 +260,41 @@ export default function FriendsPage() {
             <input
               id="friend-username"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                setUsernameError(null);
+              }}
               placeholder="priya"
+              maxLength={30}
+              aria-invalid={Boolean(usernameError)}
+              aria-describedby={usernameError ? 'friend-username-error' : undefined}
               className={cn(
                 'w-full rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-4',
                 'font-display text-[22px] text-label-primary placeholder:text-label-tertiary',
                 'border-2 border-transparent transition-colors focus:border-tint',
               )}
             />
+            {usernameError && (
+              <p id="friend-username-error" role="alert" className="mt-2 text-footnote text-destructive">
+                {usernameError}
+              </p>
+            )}
           </div>
           <Button
             fullWidth
             disabled={username.trim().length === 0}
             onClick={async () => {
               if (!userId) return;
+              const validationError = getUsernameValidationError(username);
+              if (validationError) {
+                setUsernameError(validationError);
+                return;
+              }
               const result = await requestFriendByUsername(userId, username);
               showToast(result.message);
               if (result.ok) {
                 setUsername('');
+                setUsernameError(null);
                 setAddOpen(false);
                 await reload();
               }

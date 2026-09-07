@@ -9,15 +9,16 @@ import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { isValidHHmm } from '@/lib/dates';
+import { habitNameSchema, timeConstraintSchema } from '@/lib/validation';
 import type { Frequency, DifficultyLevel } from '@/db/schema';
 
 /** data-model.md §2 validation, expressed once as a zod schema. */
 const habitSchema = z.object({
-  name: z.string().trim().min(1, 'Give your habit a name.').max(60, 'Keep the name under 60 characters.'),
-  timeConstraint: z
-    .string()
-    .nullable()
-    .refine((v) => v === null || isValidHHmm(v), 'Enter a valid time, like 09:00.'),
+  name: habitNameSchema,
+  timeConstraint: timeConstraintSchema.refine(
+    (v) => v === null || isValidHHmm(v),
+    'Enter a valid time, like 09:00.',
+  ),
 });
 
 const FREQUENCIES: { value: Frequency; label: string }[] = [

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/Sheet';
 import { updateSettings, updateUserName } from '@/db/queries';
 import { cn } from '@/lib/cn';
+import { getDisplayNameValidationError } from '@/lib/validation';
 
 type PermissionState = 'default' | 'granted' | 'denied' | 'unsupported';
 
@@ -26,6 +27,7 @@ export default function SettingsPage() {
 
   const [name, setName] = useState(userName);
   const [nameSaved, setNameSaved] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
   const [permission, setPermission] = useState<PermissionState>('default');
   const [confirmSignOut, setConfirmSignOut] = useState(false);
 
@@ -139,10 +141,17 @@ export default function SettingsPage() {
                 onChange={(e) => {
                   setName(e.target.value);
                   setNameSaved(false);
+                  setNameError(null);
                 }}
                 onBlur={async () => {
                   const trimmed = name.trim();
-                  if (!userId || trimmed.length === 0 || trimmed === userName) return;
+                  const validationError = getDisplayNameValidationError(trimmed);
+                  if (validationError) {
+                    setNameError(validationError);
+                    setName(userName);
+                    return;
+                  }
+                  if (!userId || trimmed === userName) return;
                   await updateUserName(userId, trimmed);
                   // Low-stakes edit: inline checkmark, not a full toast
                   // (ui-spec.md §14).
@@ -165,6 +174,7 @@ export default function SettingsPage() {
                 <Check size={20} aria-label="Saved" />
               </span>
             </div>
+            {nameError && <p className="mt-2 text-footnote text-destructive">{nameError}</p>}
             <p className="mt-2 text-footnote text-label-secondary">
               Synced to your account, so it follows you to any device.
             </p>

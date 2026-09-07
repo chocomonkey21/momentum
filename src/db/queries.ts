@@ -23,6 +23,14 @@ import {
 import { replayMomentum } from '@/lib/momentum';
 import { todayKey, yesterdayKey, dayKeyRange, dayKeyToDate, toDayKey } from '@/lib/dates';
 import { CHART_COLORS, type ChartColor } from '@/theme/theme';
+import {
+  validateChainName,
+  validateDisplayName,
+  validateHabitName,
+  validateNotes,
+  validateTimeConstraint,
+  validateUsername,
+} from '@/lib/validation';
 
 /**
  * Data access, now backed by Supabase/Postgres instead of Dexie/IndexedDB.
@@ -93,7 +101,8 @@ export async function getUser() {
 }
 
 export async function updateUserName(userId: string, name: string) {
-  const { error } = await supabase.from('users').update({ name }).eq('id', userId);
+  const validName = validateDisplayName(name);
+  const { error } = await supabase.from('users').update({ name: validName }).eq('id', userId);
   fail('rename profile', error);
 }
 
@@ -153,16 +162,18 @@ export async function createHabit(input: {
   categoryTag?: string | null;
   createdAt?: string;
 }): Promise<number> {
+  const name = validateHabitName(input.name);
+  const timeConstraint = validateTimeConstraint(input.timeConstraint ?? null);
   const chartColor = await nextChartColor(input.userId);
   const { data, error } = await supabase
     .from('habits')
     .insert({
       user_id: input.userId,
-      name: input.name.trim(),
+      name,
       frequency: input.frequency,
       difficulty_level: input.difficultyLevel,
       momentum_score: 50, // new habits start at the midpoint
-      time_constraint: input.timeConstraint ?? null,
+      time_constraint: timeConstraint,
       category_tag: input.categoryTag ?? null,
       chart_color: chartColor,
       created_at: input.createdAt ?? new Date().toISOString(),
@@ -181,10 +192,10 @@ export async function updateHabit(
   >,
 ) {
   const row: Record<string, unknown> = {};
-  if (patch.name !== undefined) row.name = patch.name.trim();
+  if (patch.name !== undefined) row.name = validateHabitName(patch.name);
   if (patch.frequency !== undefined) row.frequency = patch.frequency;
   if (patch.difficultyLevel !== undefined) row.difficulty_level = patch.difficultyLevel;
-  if (patch.timeConstraint !== undefined) row.time_constraint = patch.timeConstraint;
+  if (patch.timeConstraint !== undefined) row.time_constraint = validateTimeConstraint(patch.timeConstraint);
   if (patch.categoryTag !== undefined) row.category_tag = patch.categoryTag;
   const { error } = await supabase.from('habits').update(row).eq('id', habitId);
   fail('update habit', error);
@@ -260,6 +271,7 @@ export async function upsertLog(entry: {
   contextTag?: ContextTag | null;
   notes?: string | null;
 }): Promise<void> {
+  const notes = validateNotes(entry.notes ?? null);
   // Preserve any existing mood/context/notes when the quick toggle (which sends
   // none of them) re-writes a day that already had detail logged against it.
   const { data: existing } = await supabase
@@ -276,7 +288,7 @@ export async function upsertLog(entry: {
       completed: entry.completed === 1,
       mood_tag: entry.moodTag ?? existing?.mood_tag ?? null,
       context_tag: entry.contextTag ?? existing?.context_tag ?? null,
-      notes: entry.notes ?? existing?.notes ?? null,
+      notes: notes ?? existing?.notes ?? null,
       logged_at: new Date().toISOString(),
     },
     { onConflict: 'habit_id,date' },
@@ -389,9 +401,10 @@ export async function getAllChainMembers(): Promise<ChainHabit[]> {
 }
 
 export async function createChain(userId: string, chainName: string, habitIds: number[]) {
+  const validChainName = validateChainName(chainName);
   const { data, error } = await supabase
     .from('habit_chains')
-    .insert({ user_id: userId, chain_name: chainName.trim() })
+    .insert({ user_id: userId, chain_name: validChainName })
     .select('id')
     .single();
   fail('create chain', error);
@@ -416,9 +429,10 @@ export async function saveChainMembers(chainId: number, habitIds: number[]) {
 }
 
 export async function renameChain(chainId: number, chainName: string) {
+  const validChainName = validateChainName(chainName);
   const { error } = await supabase
     .from('habit_chains')
-    .update({ chain_name: chainName.trim() })
+    .update({ chain_name: validChainName })
     .eq('id', chainId);
   fail('rename chain', error);
 }
@@ -511,7 +525,9 @@ export async function updateSettings(
   const row: Record<string, unknown> = {};
   if (patch.notificationsEnabled !== undefined)
     row.notifications_enabled = patch.notificationsEnabled === 1;
-  if (patch.reminderTime !== undefined) row.reminder_time = patch.reminderTime;
+  if (patch.reminderTime !== undefined) {
+    row.reminder_time = validateTimeConstraint(patch.reminderTime);
+  }
   const { error } = await supabase.from('settings').update(row).eq('user_id', userId);
   fail('save settings', error);
 }
@@ -591,10 +607,16 @@ export async function requestFriendByUsername(
   userId: string,
   username: string,
 ): Promise<{ ok: boolean; message: string }> {
+  let validUsername: string;
+  try {
+    validUsername = validateUsername(username);
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : 'Enter a valid username.' };
+  }
   const { data, error } = await supabase
     .from('users')
     .select('id')
-    .eq('username', username.trim())
+    .eq('username', validUsername)
     .maybeSingle();
   if (error) return { ok: false, message: 'Could not look up that username.' };
   if (!data) {
@@ -610,7 +632,7 @@ export async function requestFriendByUsername(
     .from('friendships')
     .insert({ user_id: userId, friend_user_id: friendUserId, status: 'pending' });
   if (insErr) return { ok: false, message: 'Could not send that request.' };
-  return { ok: true, message: `Request sent to ${username}` };
+  return { ok: true, message: `Request sent to ${validUsername}` };
 }
 
 export interface ChallengeBoard {

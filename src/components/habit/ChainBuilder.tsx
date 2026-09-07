@@ -8,6 +8,7 @@ import { Button, IconButton } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { cn } from '@/lib/cn';
 import { chartHex } from '@/theme/theme';
+import { getChainNameValidationError } from '@/lib/validation';
 import type { HabitView } from '@/context/AppContext';
 
 /**
@@ -38,17 +39,19 @@ export function ChainBuilder({
   const [name, setName] = useState(initialName);
   const [selected, setSelected] = useState<number[]>(initialHabitIds);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setName(initialName);
     setSelected(initialHabitIds);
     setSaving(false);
+    setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const available = habits.filter((h) => !selected.includes(h.id));
-  const canSave = name.trim().length > 0 && selected.length >= 1;
+  const canSave = selected.length >= 1;
 
   function move(index: number, delta: number) {
     const next = [...selected];
@@ -82,6 +85,7 @@ export function ChainBuilder({
               'border-2 border-transparent transition-colors focus:border-tint',
             )}
           />
+          {error && <p className="mt-2 text-footnote text-destructive">{error}</p>}
         </div>
 
         <div>
@@ -140,8 +144,18 @@ export function ChainBuilder({
           disabled={!canSave}
           loading={saving}
           onClick={async () => {
+            const validationError = getChainNameValidationError(name);
+            if (validationError) {
+              setError(validationError);
+              return;
+            }
             setSaving(true);
-            await onSave(name.trim(), selected);
+            try {
+              await onSave(name.trim(), selected);
+            } catch (e) {
+              setError(e instanceof Error ? e.message : "We couldn't save that chain.");
+              setSaving(false);
+            }
           }}
         >
           Save Chain
