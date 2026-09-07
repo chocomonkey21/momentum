@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { getEmailValidationError } from '@/lib/email';
 
 /**
  * Session state.
@@ -58,6 +59,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    const emailError = getEmailValidationError(email);
+    if (emailError) throw new Error(emailError);
     const { error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
@@ -66,6 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, name: string) => {
+    const emailError = getEmailValidationError(email);
+    if (emailError) throw new Error(emailError);
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,

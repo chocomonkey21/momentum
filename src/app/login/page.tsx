@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { FloatingIcons } from '@/components/ui/FloatingIcons';
 import { cn } from '@/lib/cn';
+import { getEmailValidationError } from '@/lib/email';
 import { spring, reducedFade } from '@/theme/theme';
 
 type Mode = 'signIn' | 'signUp';
@@ -50,7 +51,12 @@ export default function LoginPage() {
   async function submit() {
     setError(null);
     setNotice(null);
-    if (!email.trim() || !password) {
+    const emailError = getEmailValidationError(email);
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
+    if (!password) {
       setError('Enter your email and password.');
       return;
     }
