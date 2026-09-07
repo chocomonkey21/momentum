@@ -9,7 +9,7 @@ import { Button, IconButton } from '@/components/ui/Button';
 import { Sheet } from '@/components/ui/Sheet';
 import { EmptyState, Skeleton } from '@/components/ui/States';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import { getFriends, getChallenges, requestFriendByUsername, type FriendRow, type ChallengeBoard } from '@/db/queries';
+import { createChallenge, getFriends, getChallenges, requestFriendByUsername, type FriendRow, type ChallengeBoard } from '@/db/queries';
 import { cn } from '@/lib/cn';
 import { palette } from '@/theme/theme';
 import { getUsernameValidationError } from '@/lib/validation';
@@ -37,6 +37,13 @@ export default function FriendsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [challengeOpen, setChallengeOpen] = useState(false);
+  const [challengeName, setChallengeName] = useState('');
+  const [challengeGoal, setChallengeGoal] = useState('10');
+  const [challengeStart, setChallengeStart] = useState(() => new Date().toISOString().slice(0, 10));
+  const [challengeEnd, setChallengeEnd] = useState(() => new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
+  const [challengeFriend, setChallengeFriend] = useState('');
+  const [challengeError, setChallengeError] = useState<string | null>(null);
 
   const [friends, setFriends] = useState<FriendRow[] | null>(null);
   const [challengeRows, setChallengeRows] = useState<ChallengeBoard[] | null>(null);
@@ -163,9 +170,15 @@ export default function FriendsPage() {
           <EmptyState
             icon={Trophy}
             message="No active challenges. Start one with a friend to compare momentum over a set window."
+            actionLabel={accepted.length > 0 ? 'Create a challenge' : undefined}
+            onAction={accepted.length > 0 ? () => setChallengeOpen(true) : undefined}
           />
         ) : (
-          <ul className="flex flex-col gap-4">
+          <>
+            <Button variant="secondary" fullWidth className="mb-4" onClick={() => setChallengeOpen(true)}>
+              Create a challenge
+            </Button>
+            <ul className="flex flex-col gap-4">
             {challengeRows.map((challenge) => (
               <li key={challenge.id}>
                 <section className="overflow-hidden rounded-[var(--radius-card)] bg-bg-secondary">
@@ -197,7 +210,7 @@ export default function FriendsPage() {
                   <ol className="flex flex-col gap-3 p-5">
                     {challenge.board.map((p, rank) => {
                       const isYou = p.userId === userId;
-                      const max = challenge.board[0]?.progress || 1;
+                      const max = Math.max(challenge.goalValue, challenge.board[0]?.progress ?? 0, 1);
                       return (
                         <li key={`${challenge.id}-${p.userId}`}>
                           <div className="flex items-center gap-3">
@@ -218,7 +231,7 @@ export default function FriendsPage() {
                               {p.name}
                             </span>
                             <span className="font-display-hero text-[22px] leading-none">
-                              {p.progress}
+                              {p.progress} / {challenge.goalValue}
                             </span>
                           </div>
                           {/* Progress bar uses tint for you, neutral grey for
@@ -242,7 +255,8 @@ export default function FriendsPage() {
                 </section>
               </li>
             ))}
-          </ul>
+            </ul>
+          </>
         )}
       </PageFade>
 
@@ -304,9 +318,51 @@ export default function FriendsPage() {
           </Button>
         </div>
       </Sheet>
+
+      <Sheet
+        open={challengeOpen}
+        onOpenChange={setChallengeOpen}
+        title="Create a Challenge"
+        description="Set a shared goal and deadline with a friend."
+      >
+        <div className="flex flex-col gap-4">
+          <label className="font-data text-label-tertiary">Challenge name
+            <input value={challengeName} onChange={(e) => setChallengeName(e.target.value)} placeholder="Seven day reset" className={sheetInput} />
+          </label>
+          <label className="font-data text-label-tertiary">Friend
+            <select value={challengeFriend} onChange={(e) => setChallengeFriend(e.target.value)} className={sheetInput}>
+              <option value="">Choose a friend</option>
+              {accepted.map((friend) => <option key={friend.friendUserId} value={friend.friendUserId}>{friend.name}</option>)}
+            </select>
+          </label>
+          <label className="font-data text-label-tertiary">Goal completions
+            <input type="number" min={1} value={challengeGoal} onChange={(e) => setChallengeGoal(e.target.value)} className={sheetInput} />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="font-data text-label-tertiary">Starts<input type="date" value={challengeStart} onChange={(e) => setChallengeStart(e.target.value)} className={sheetInput} /></label>
+            <label className="font-data text-label-tertiary">Ends<input type="date" value={challengeEnd} onChange={(e) => setChallengeEnd(e.target.value)} className={sheetInput} /></label>
+          </div>
+          {challengeError && <p role="alert" className="text-footnote text-destructive">{challengeError}</p>}
+          <Button fullWidth onClick={async () => {
+            if (!userId || !challengeFriend) { setChallengeError('Choose a friend to challenge.'); return; }
+            try {
+              await createChallenge({ userId, friendUserId: challengeFriend, challengeName, goalMetric: 'Habit completions', goalValue: Number(challengeGoal), startDate: challengeStart, endDate: challengeEnd });
+              setChallengeOpen(false);
+              setChallengeName('');
+              setChallengeError(null);
+              await reload();
+              showToast('Challenge created');
+            } catch (error) {
+              setChallengeError(error instanceof Error ? error.message : 'Could not create challenge.');
+            }
+          }}>Create challenge</Button>
+        </div>
+      </Sheet>
     </Screen>
   );
 }
+
+const sheetInput = 'mt-2 w-full rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-3 text-body text-label-primary';
 
 function FriendRowItem({
   name,

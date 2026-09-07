@@ -241,6 +241,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await q.upsertLog({ habitId, date: todayKey(), completed: completed ? 1 : 0 });
         await q.recomputeMomentum(habitId);
         await refresh();
+        if (userId) {
+          const unlocked = await q.syncAchievements(userId);
+          if (unlocked.length > 0) showToast(`Achievement unlocked: ${unlocked[0].toUpperCase()}`);
+        }
       } catch (err) {
         console.error('[Momentum] failed to save completion', err);
         showToast("Couldn't save that — tap to retry", 'Retry', () => {
@@ -249,7 +253,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await refresh();
       }
     },
-    [refresh, showToast],
+    [refresh, showToast, userId],
   );
 
   const saveLog = useCallback<AppValue['saveLog']>(
@@ -265,6 +269,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
         await q.recomputeMomentum(habitId);
         await refresh();
+        if (userId && draft.completed) {
+          const unlocked = await q.syncAchievements(userId);
+          if (unlocked.length > 0) showToast(`Achievement unlocked: ${unlocked[0].toUpperCase()}`);
+        }
         showToast(draft.completed ? 'Entry saved' : 'Marked as skipped');
       } catch (err) {
         console.error('[Momentum] failed to save log', err);
@@ -273,7 +281,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
       }
     },
-    [refresh, showToast],
+    [refresh, showToast, userId],
   );
 
   const addHabit = useCallback<AppValue['addHabit']>(

@@ -79,6 +79,23 @@ export default function RecapPage() {
   const hasFullWeek = habits.some(
     (h) => new Date(h.createdAt) <= subDays(new Date(), 6),
   );
+  const weeklySummary = useMemo(() => {
+    const completed = recaps.reduce((sum, recap) => sum + recap.completions, 0);
+    const possible = recaps.reduce((sum, recap) => sum + recap.outOf, 0);
+    const momentum = habits.length
+      ? Math.round(habits.reduce((sum, habit) => sum + habit.momentumScore, 0) / habits.length)
+      : 0;
+    const bestStreak = Math.max(0, ...habits.map((habit) => habit.streak));
+    const headline = completed / Math.max(1, possible) >= 0.75
+      ? "You're building momentum."
+      : completed / Math.max(1, possible) >= 0.45
+        ? "You're finding your rhythm."
+        : "You're still in the game.";
+    const sentence = completed > 0
+      ? `You had your strongest week in the last month, mainly because ${recaps.find((r) => r.completions === Math.max(...recaps.map((item) => item.completions)))?.habit.name ?? 'your habits'} stayed consistent.`
+      : 'A quieter week is still useful data. Start with one small win today.';
+    return { completed, possible, momentum, bestStreak, headline, sentence };
+  }, [habits, recaps]);
 
   return (
     <Screen>
@@ -109,7 +126,18 @@ export default function RecapPage() {
             message="Come back after your first week — a recap needs a full seven days to say anything useful."
           />
         ) : (
-          <ul className="flex flex-col gap-3">
+          <>
+            <section className="mb-6 rounded-[var(--radius-card)] bg-bg-secondary p-6">
+              <p className="font-data text-label-tertiary">WEEK {format(new Date(), 'w')}</p>
+              <h2 className="font-display mt-2 text-[32px] leading-tight">{weeklySummary.headline}</h2>
+              <div className="mt-6 grid grid-cols-2 gap-4">
+                <div><p className="font-display-hero text-[42px]">{weeklySummary.momentum}%</p><p className="font-data text-label-tertiary">Overall Momentum</p></div>
+                <div><p className="font-display-hero text-[42px]">{weeklySummary.completed} / {weeklySummary.possible}</p><p className="font-data text-label-tertiary">Habits completed</p></div>
+                <div className="col-span-2"><p className="font-display-hero text-[32px]">{weeklySummary.bestStreak} days</p><p className="font-data text-label-tertiary">Best streak</p></div>
+              </div>
+              <p className="mt-5 text-body leading-relaxed text-label-secondary">{weeklySummary.sentence}</p>
+            </section>
+            <ul className="flex flex-col gap-3">
             {recaps.map(({ habit, completions, outOf, verdict, sentence }, i) => (
               <motion.li
                 key={habit.id}
@@ -158,7 +186,8 @@ export default function RecapPage() {
                 </button>
               </motion.li>
             ))}
-          </ul>
+            </ul>
+          </>
         )}
       </PageFade>
     </Screen>

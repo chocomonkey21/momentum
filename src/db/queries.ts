@@ -23,6 +23,8 @@ import {
 import { replayMomentum } from '@/lib/momentum';
 import { todayKey, yesterdayKey, dayKeyRange, dayKeyToDate, toDayKey } from '@/lib/dates';
 import { CHART_COLORS, type ChartColor } from '@/theme/theme';
+import { currentStreak, totalCompletions } from '@/lib/streak';
+import { computeAchievements, type AchievementType } from '@/lib/achievements';
 import {
   validateChainName,
   validateDisplayName,
@@ -480,6 +482,57 @@ export async function getPomodoroSessions(userId: string): Promise<PomodoroSessi
   return (data as PomodoroRow[] | null ?? []).map(toPomodoro);
 }
 
+export async function getUserAchievementState(
+  userId: string,
+): Promise<Partial<Record<AchievementType, string>>> {
+  const { data, error } = await supabase
+    .from('user_achievements')
+    .select('achievement_type, unlocked_at')
+    .eq('user_id', userId);
+  fail('load achievements', error);
+  return Object.fromEntries(
+    ((data ?? []) as { achievement_type: AchievementType; unlocked_at: string }[]).map((row) => [
+      row.achievement_type,
+      row.unlocked_at,
+    ]),
+  );
+}
+
+/** Evaluate all six rules from the existing source data and persist only new unlocks. */
+export async function syncAchievements(userId: string): Promise<AchievementType[]> {
+  const habits = await getActiveHabits(userId);
+  const logs = await getAllLogs(habits.flatMap((habit) => (habit.id ? [habit.id] : [])));
+  const logsByHabit = new Map<number, typeof logs>();
+  for (const log of logs) {
+    const current = logsByHabit.get(log.habitId) ?? [];
+    current.push(log);
+    logsByHabit.set(log.habitId, current);
+  }
+  const currentHabitStreak = Math.max(
+    0,
+    ...habits.map((habit) => currentStreak(logsByHabit.get(habit.id ?? -1) ?? [])),
+  );
+  const focusSessions = (await getPomodoroSessions(userId)).filter((session) => session.completed === 1).length;
+  const unlocked = await getUserAchievementState(userId);
+  const achievements = computeAchievements({
+    lifetimeHabitCompletions: totalCompletions(logs),
+    currentHabitStreak,
+    completedFocusSessions: focusSessions,
+    unlockedTypes: unlocked,
+  });
+  const newlyUnlocked = achievements
+    .filter((achievement) => achievement.unlocked && !unlocked[achievement.id])
+    .map((achievement) => achievement.id);
+  if (newlyUnlocked.length > 0) {
+    const { error } = await supabase.from('user_achievements').upsert(
+      newlyUnlocked.map((achievement_type) => ({ user_id: userId, achievement_type })),
+      { onConflict: 'user_id,achievement_type', ignoreDuplicates: true },
+    );
+    fail('save achievements', error);
+  }
+  return newlyUnlocked;
+}
+
 /* ------------------------------------------------------------------ *
  * Settings
  * ------------------------------------------------------------------ */
@@ -639,15 +692,54 @@ export interface ChallengeBoard {
   id: number;
   challengeName: string;
   goalMetric: string;
+  goalValue: number;
   startDate: string;
   endDate: string;
   board: { userId: string; name: string; progress: number }[];
 }
 
+export async function createChallenge(input: {
+  userId: string;
+  friendUserId: string;
+  challengeName: string;
+  goalMetric: string;
+  goalValue: number;
+  startDate: string;
+  endDate: string;
+}) {
+  if (!input.challengeName.trim() || input.challengeName.trim().length > 60) {
+    throw new Error('Challenge name must be between 1 and 60 characters.');
+  }
+  if (!Number.isInteger(input.goalValue) || input.goalValue < 1) {
+    throw new Error('Challenge goal must be a positive whole number.');
+  }
+  if (input.endDate < input.startDate) throw new Error('Challenge deadline must be after its start date.');
+  const { data, error } = await supabase
+    .from('challenges')
+    .insert({
+      creator_user_id: input.userId,
+      challenge_name: input.challengeName.trim(),
+      goal_metric: input.goalMetric.trim() || 'Habit completions',
+      goal_value: input.goalValue,
+      start_date: input.startDate,
+      end_date: input.endDate,
+    })
+    .select('id')
+    .single();
+  fail('create challenge', error);
+  const challengeId = (data as { id: number }).id;
+  const { error: participantError } = await supabase.from('challenge_participants').insert([
+    { challenge_id: challengeId, user_id: input.userId, progress: 0 },
+    { challenge_id: challengeId, user_id: input.friendUserId, progress: 0 },
+  ]);
+  fail('add challenge participants', participantError);
+  return challengeId;
+}
+
 export async function getChallenges(userId: string): Promise<ChallengeBoard[]> {
   const { data, error } = await supabase
     .from('challenges')
-    .select('id, challenge_name, goal_metric, start_date, end_date')
+    .select('id, challenge_name, goal_metric, goal_value, start_date, end_date')
     .order('id', { ascending: true });
   fail('load challenges', error);
 
@@ -655,6 +747,7 @@ export async function getChallenges(userId: string): Promise<ChallengeBoard[]> {
     id: number;
     challenge_name: string;
     goal_metric: string;
+    goal_value: number;
     start_date: string;
     end_date: string;
   }[];
@@ -675,10 +768,33 @@ export async function getChallenges(userId: string): Promise<ChallengeBoard[]> {
     ((profiles ?? []) as { id: string; name: string }[]).map((p) => [p.id, p.name]),
   );
 
+  // Keep the signed-in participant's score live from the existing habit logs.
+  // Other participants' rows remain protected by RLS and are updated when
+  // they open the app, so no user's private logs are exposed here.
+  const ownHabits = await getActiveHabits(userId);
+  const ownLogs = await getAllLogs(ownHabits.flatMap((habit) => (habit.id ? [habit.id] : [])));
+  const ownProgress = new Map(
+    challenges.map((challenge) => [
+      challenge.id,
+      ownLogs.filter(
+        (log) => log.completed === 1 && log.date >= challenge.start_date && log.date <= challenge.end_date,
+      ).length,
+    ]),
+  );
+  for (const challenge of challenges) {
+    const progress = ownProgress.get(challenge.id) ?? 0;
+    await supabase
+      .from('challenge_participants')
+      .update({ progress })
+      .eq('challenge_id', challenge.id)
+      .eq('user_id', userId);
+  }
+
   return challenges.map((c) => ({
     id: c.id,
     challengeName: c.challenge_name,
     goalMetric: c.goal_metric,
+    goalValue: c.goal_value,
     startDate: c.start_date,
     endDate: c.end_date,
     board: rows
@@ -686,7 +802,7 @@ export async function getChallenges(userId: string): Promise<ChallengeBoard[]> {
       .map((r) => ({
         userId: r.user_id,
         name: r.user_id === userId ? 'You' : (nameById.get(r.user_id) ?? 'Unknown'),
-        progress: r.progress,
+        progress: r.user_id === userId ? ownProgress.get(c.id) ?? r.progress : r.progress,
       }))
       .sort((a, b) => b.progress - a.progress),
   }));

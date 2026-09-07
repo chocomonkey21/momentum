@@ -8,16 +8,18 @@ import { Screen, ScreenHeader, PageFade } from '@/components/ui/Screen';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States';
 import { MomentumChart } from '@/components/chart/MomentumChart';
+import { MomentumHistoryChart } from '@/components/chart/MomentumHistoryChart';
 import { InsightCard } from '@/components/habit/InsightCard';
 import { aggregateInsight, MIN_LOGS_FOR_INSIGHT } from '@/lib/insights';
-import { momentumBand } from '@/lib/momentum';
+import { momentumBand, momentumSeries } from '@/lib/momentum';
+import { dayKeyRange, toDayKey } from '@/lib/dates';
 import { chartHex, semantic, palette } from '@/theme/theme';
 import { Stat } from '@/components/ui/Stat';
 
-type Range = 'week' | 'year';
+type Range = 'month' | 'year';
 
 const RANGES: { value: Range; label: string }[] = [
-  { value: 'week', label: 'Week' },
+  { value: 'month', label: '30 Days' },
   { value: 'year', label: 'Year' },
 ];
 
@@ -32,9 +34,9 @@ const RANGES: { value: Range; label: string }[] = [
 export default function StatsPage() {
   const router = useRouter();
   const { status, errorMessage, retry, habits, allLogs } = useApp();
-  const [range, setRange] = useState<Range>('week');
+  const [range, setRange] = useState<Range>('month');
 
-  const days = range === 'week' ? 7 : 365;
+  const days = range === 'month' ? 30 : 365;
 
   const overall = useMemo(() => {
     if (habits.length === 0) return 0;
@@ -42,6 +44,25 @@ export default function StatsPage() {
   }, [habits]);
 
   const insight = useMemo(() => aggregateInsight(allLogs), [allLogs]);
+  const momentumSummary = useMemo(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 29);
+    const keys = dayKeyRange(toDayKey(start), toDayKey(end));
+    const values = habits.map((habit) => momentumSeries(habit.logs, keys));
+    const daily = keys.map((_, index) => {
+      const points = values.map((series) => series[index]).filter((value): value is number => value !== null);
+      return points.length ? points.reduce((sum, value) => sum + value, 0) / points.length : overall;
+    });
+    const previous = daily[22] ?? daily[0] ?? overall;
+    const delta = overall - Math.round(previous);
+    const band = momentumBand(overall);
+    const status = band === 'strong' ? 'Building' : band === 'steady' ? 'Steady' : 'Recovering';
+    const explanation = insight ?? (delta >= 0
+      ? "You're recovering well. Your consistency is improving."
+      : "A few missed days have dipped your momentum, but the trend is recoverable.");
+    return { delta, status, explanation };
+  }, [habits, overall, insight]);
 
   if (status === 'error') {
     return (
@@ -88,11 +109,16 @@ export default function StatsPage() {
                 <Stat
                   size="xl"
                   value={overall}
-                  label={`Overall momentum · ${habits.length} habit${habits.length === 1 ? '' : 's'}`}
+                  label="Your Momentum"
                   labelClassName={
                     momentumBand(overall) === 'strong' ? '!text-current opacity-70' : '!text-current'
                   }
                 />
+                <div className="mt-3 flex items-center justify-between gap-3 font-data text-sm">
+                  <span>Momentum status: {momentumSummary.status}</span>
+                  <span>{momentumSummary.delta >= 0 ? '↑' : '↓'} {Math.abs(momentumSummary.delta)}% from last week</span>
+                </div>
+                <p className="mt-3 max-w-[46ch] text-body leading-relaxed opacity-80">{momentumSummary.explanation}</p>
               </section>
 
               <div className="mb-4">
@@ -104,7 +130,8 @@ export default function StatsPage() {
                 />
               </div>
 
-              <section className="rounded-[var(--radius-card)] bg-bg-secondary p-5">
+              <MomentumHistoryChart habits={habits} />
+              <section className="mt-4 rounded-[var(--radius-card)] bg-bg-secondary p-5">
                 <MomentumChart habits={habits} days={days} />
               </section>
             </div>

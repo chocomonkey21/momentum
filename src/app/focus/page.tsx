@@ -2,18 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Play, Pause, RotateCcw, Link2, Check } from 'lucide-react';
+import { format } from 'date-fns';
 import { useApp } from '@/context/AppContext';
 import { Screen, ScreenHeader, PageFade } from '@/components/ui/Screen';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { Sheet } from '@/components/ui/Sheet';
 import { MomentumRing } from '@/components/ui/MomentumRing';
-import { savePomodoroSession, getPomodoroSessions } from '@/db/queries';
+import { savePomodoroSession, getPomodoroSessions, syncAchievements } from '@/db/queries';
 import type { PomodoroSession } from '@/db/schema';
 import { semantic, chartHex, palette } from '@/theme/theme';
 import { cn } from '@/lib/cn';
 
-const PRESETS = [25, 45, 60];
+const PRESETS = [25, 50, 90];
 
 /**
  * Focus / Pomodoro (ui-spec.md §10).
@@ -68,7 +69,8 @@ export default function FocusPage() {
       setRemaining(durationMinutes * 60);
       if (completed === 1) {
         setJustCompleted(true);
-        showToast('Focus session complete');
+        const unlocked = userId ? await syncAchievements(userId) : [];
+        showToast(unlocked.length > 0 ? `Achievement unlocked: ${unlocked[0].toUpperCase()}` : 'Focus session complete');
         setTimeout(() => setJustCompleted(false), 2500);
       }
     },
@@ -118,6 +120,8 @@ export default function FocusPage() {
   const todaySessions = (sessions ?? []).filter(
     (s) => s.startTime.slice(0, 10) === new Date().toISOString().slice(0, 10),
   );
+  const completedSessions = (sessions ?? []).filter((session) => session.completed === 1);
+  const totalFocusMinutes = completedSessions.reduce((sum, session) => sum + session.durationMinutes, 0);
 
   return (
     <Screen>
@@ -268,6 +272,16 @@ export default function FocusPage() {
 
         <section className="mt-10">
           <h2 className="font-display mb-3 text-title2">Today&rsquo;s Sessions</h2>
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            <div className="rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3">
+              <p className="font-display-hero text-[28px]">{completedSessions.length}</p>
+              <p className="font-data text-label-tertiary">Completed sessions</p>
+            </div>
+            <div className="rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3">
+              <p className="font-display-hero text-[28px]">{totalFocusMinutes}m</p>
+              <p className="font-data text-label-tertiary">Total focus time</p>
+            </div>
+          </div>
           {todaySessions.length === 0 ? (
             <p className="rounded-[var(--radius-card)] bg-bg-secondary px-5 py-6 text-body text-label-secondary">
               No focus sessions yet today.
@@ -300,6 +314,22 @@ export default function FocusPage() {
                 );
               })}
             </ul>
+          )}
+          {sessions.length > 0 && (
+            <div className="mt-6">
+              <h3 className="font-display mb-3 text-title2">Recent sessions</h3>
+              <ul className="flex flex-col gap-2">
+                {sessions.slice(0, 5).map((session) => {
+                  const habit = habits.find((candidate) => candidate.id === session.habitId);
+                  return (
+                    <li key={`recent-${session.id}`} className="flex items-center gap-3 rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3">
+                      <span className="flex-1 text-body">{session.durationMinutes} min{habit ? ` · ${habit.name}` : ''}</span>
+                      <span className="font-data text-label-tertiary">{format(new Date(session.startTime), 'd MMM')}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           )}
         </section>
       </PageFade>

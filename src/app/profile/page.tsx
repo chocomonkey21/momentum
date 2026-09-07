@@ -8,9 +8,9 @@ import { useApp } from '@/context/AppContext';
 import { Screen, ScreenHeader, PageFade } from '@/components/ui/Screen';
 import { Sheet } from '@/components/ui/Sheet';
 import { ErrorState, Skeleton } from '@/components/ui/States';
-import { computeAchievements, bestStreakEver, type Achievement } from '@/lib/achievements';
+import { computeAchievements, bestStreakEver, type Achievement, type AchievementType } from '@/lib/achievements';
 import { totalCompletions, completionRate } from '@/lib/streak';
-import { getPomodoroSessions } from '@/db/queries';
+import { getPomodoroSessions, getUserAchievementState, syncAchievements } from '@/db/queries';
 import type { PomodoroSession } from '@/db/schema';
 import { cn } from '@/lib/cn';
 import { semantic, palette } from '@/theme/theme';
@@ -29,9 +29,16 @@ export default function ProfilePage() {
   const [detail, setDetail] = useState<Achievement | null>(null);
 
   const [sessions, setSessions] = useState<PomodoroSession[]>([]);
+  const [unlockedTypes, setUnlockedTypes] = useState<Partial<Record<AchievementType, string>>>({});
   useEffect(() => {
     if (!userId) return;
-    void getPomodoroSessions(userId).then(setSessions);
+    void Promise.all([
+      getPomodoroSessions(userId),
+      syncAchievements(userId),
+    ]).then(async ([nextSessions]) => {
+      setSessions(nextSessions);
+      setUnlockedTypes(await getUserAchievementState(userId));
+    });
   }, [userId]);
 
   const stats = useMemo(() => {
@@ -49,13 +56,12 @@ export default function ProfilePage() {
   const achievements = useMemo(
     () =>
       computeAchievements({
-        logs: allLogs,
-        bestStreak: stats.bestStreak,
-        habitCount: habits.length,
-        bestMomentum: stats.bestMomentum,
-        focusSessions: (sessions ?? []).filter((s) => s.completed === 1).length,
+        lifetimeHabitCompletions: stats.completions,
+        currentHabitStreak: stats.currentBest,
+        completedFocusSessions: (sessions ?? []).filter((s) => s.completed === 1).length,
+        unlockedTypes,
       }),
-    [allLogs, stats, habits.length, sessions],
+    [stats, sessions, unlockedTypes],
   );
 
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
@@ -121,7 +127,7 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setDetail(a)}
-                  aria-label={`${a.name}, ${a.unlocked ? 'unlocked' : 'locked'}. ${a.criteria}.`}
+                  aria-label={`${a.name}, ${a.unlocked ? 'unlocked' : 'locked'}. ${a.description}.`}
                   className="flex min-h-[72px] w-full items-center gap-4 py-4 text-left"
                 >
                   {/* One hue for every badge: amber disc when unlocked, a dim
@@ -146,7 +152,7 @@ export default function ProfilePage() {
                     >
                       {a.name}
                     </span>
-                    <span className="mt-1 block text-footnote text-label-tertiary">{a.criteria}</span>
+                    <span className="mt-1 block text-footnote text-label-tertiary">{a.description}</span>
                     {!a.unlocked && (
                       <span className="mt-2 block h-1 w-full overflow-hidden rounded-[var(--radius-pill)] bg-ink4">
                         <span
@@ -163,7 +169,7 @@ export default function ProfilePage() {
                     className="font-data shrink-0"
                     style={{ color: a.unlocked ? palette.amber : semantic.labelTertiary }}
                   >
-                    {a.unlocked ? 'Unlocked' : `${Math.round(a.progress * 100)}%`}
+                      {a.unlocked ? 'Unlocked' : a.progressLabel}
                   </span>
                 </button>
               </li>
@@ -195,7 +201,7 @@ export default function ProfilePage() {
       >
         {detail && (
           <div className="flex flex-col gap-4">
-            <p className="text-body">{detail.criteria}</p>
+            <p className="text-body">{detail.description}</p>
             {!detail.unlocked && (
               <div>
                 <div className="h-3 overflow-hidden rounded-[var(--radius-pill)] bg-bg-tertiary">

@@ -1,61 +1,70 @@
 import type { HabitLog } from '@/db/schema';
-import { totalCompletions } from './streak';
 
-/**
- * Achievements (ui-spec.md §13 / design-system.md §7).
- *
- * Locked badges are always shown with their criteria — a mystery grey icon is
- * less motivating than a visible target, and the Product Philosophy is about
- * showing what's reachable rather than hiding it.
- *
- * Derived, never stored, so they can never drift from the underlying logs.
- */
-export interface Achievement {
-  id: string;
+export type AchievementType =
+  | 'first-step'
+  | 'consistent'
+  | 'dedicated'
+  | 'getting-started'
+  | 'committed'
+  | 'first-focus';
+
+export interface AchievementDefinition {
+  id: AchievementType;
   name: string;
-  criteria: string;
-  unlocked: boolean;
-  /** 0–1, for the "how close am I" hint on a locked badge. */
-  progress: number;
+  description: string;
+  requirement: string;
+  target: number;
+  unit: string;
 }
+
+export interface Achievement extends AchievementDefinition {
+  unlocked: boolean;
+  progress: number;
+  current: number;
+  progressLabel: string;
+  unlockedAt?: string | null;
+}
+
+export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
+  { id: 'first-step', name: 'FIRST STEP', description: 'Complete your first habit.', requirement: 'Complete your first habit', target: 1, unit: 'completion' },
+  { id: 'consistent', name: 'CONSISTENT', description: 'Maintain a 7-day streak.', requirement: 'Maintain a 7-day streak', target: 7, unit: 'days' },
+  { id: 'dedicated', name: 'DEDICATED', description: 'Maintain a 30-day streak.', requirement: 'Maintain a 30-day streak', target: 30, unit: 'days' },
+  { id: 'getting-started', name: 'GETTING STARTED', description: 'Complete 10 habit instances.', requirement: 'Complete 10 habit instances', target: 10, unit: 'completions' },
+  { id: 'committed', name: 'COMMITTED', description: 'Complete 50 habit instances.', requirement: 'Complete 50 habit instances', target: 50, unit: 'completions' },
+  { id: 'first-focus', name: 'FIRST FOCUS', description: 'Complete your first Pomodoro session.', requirement: 'Complete your first Pomodoro session', target: 1, unit: 'session' },
+];
 
 export function computeAchievements(input: {
-  logs: HabitLog[];
-  bestStreak: number;
-  habitCount: number;
-  bestMomentum: number;
-  focusSessions: number;
+  lifetimeHabitCompletions: number;
+  currentHabitStreak: number;
+  completedFocusSessions: number;
+  unlockedTypes?: Partial<Record<AchievementType, string | null>>;
 }): Achievement[] {
-  const completions = totalCompletions(input.logs);
+  const values: Record<AchievementType, number> = {
+    'first-step': input.lifetimeHabitCompletions,
+    consistent: input.currentHabitStreak,
+    dedicated: input.currentHabitStreak,
+    'getting-started': input.lifetimeHabitCompletions,
+    committed: input.lifetimeHabitCompletions,
+    'first-focus': input.completedFocusSessions,
+  };
 
-  const make = (
-    id: string,
-    name: string,
-    criteria: string,
-    value: number,
-    target: number,
-  ): Achievement => ({
-    id,
-    name,
-    criteria,
-    unlocked: value >= target,
-    progress: Math.max(0, Math.min(1, target === 0 ? 0 : value / target)),
+  return ACHIEVEMENT_DEFINITIONS.map((definition) => {
+    const current = values[definition.id];
+    const persistedAt = input.unlockedTypes?.[definition.id];
+    const unlocked = Boolean(persistedAt) || current >= definition.target;
+    return {
+      ...definition,
+      unlocked,
+      current,
+      progress: Math.max(0, Math.min(1, current / definition.target)),
+      progressLabel: `${Math.min(current, definition.target)} / ${definition.target} ${definition.unit}`,
+      unlockedAt: persistedAt ?? null,
+    };
   });
-
-  return [
-    make('first-step', 'First Step', 'Log your first completion', completions, 1),
-    make('ten-down', 'Ten Down', 'Complete habits 10 times', completions, 10),
-    make('half-century', 'Half Century', 'Complete habits 50 times', completions, 50),
-    make('week-strong', 'Week Strong', 'Hold a 7-day streak', input.bestStreak, 7),
-    make('fortnight', 'Fortnight', 'Hold a 14-day streak', input.bestStreak, 14),
-    make('high-momentum', 'In the Groove', 'Push a habit past 70 momentum', input.bestMomentum, 70),
-    make('maxed', 'Full Tilt', 'Reach 100 momentum on any habit', input.bestMomentum, 100),
-    make('stacked', 'Stacked', 'Track 3 habits at once', input.habitCount, 3),
-    make('focused', 'Deep Work', 'Finish 5 focus sessions', input.focusSessions, 5),
-  ];
 }
 
-/** Best streak ever achieved for a habit, walking its full history. */
+/** Best uninterrupted completed run across a habit's full history. */
 export function bestStreakEver(logs: Pick<HabitLog, 'date' | 'completed'>[]): number {
   const ordered = [...logs].sort((a, b) => a.date.localeCompare(b.date));
   let best = 0;
@@ -63,7 +72,7 @@ export function bestStreakEver(logs: Pick<HabitLog, 'date' | 'completed'>[]): nu
   for (const log of ordered) {
     if (log.completed === 1) {
       run += 1;
-      if (run > best) best = run;
+      best = Math.max(best, run);
     } else {
       run = 0;
     }
