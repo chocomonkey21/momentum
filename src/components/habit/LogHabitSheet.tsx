@@ -1,14 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Lock, Check, X } from 'lucide-react';
+import { Clock, Check, X } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/cn';
 import { spring, reducedFade, MOOD_COLORS, MOOD_LABELS, semantic, palette } from '@/theme/theme';
 import { Sheet } from '@/components/ui/Sheet';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
-import { formatHHmm } from '@/lib/dates';
+import { formatHHmm, todayKey } from '@/lib/dates';
+import { format } from 'date-fns';
+import { isPastWindow } from '@/lib/timeConstraint';
 import type { ContextTag, MoodTag } from '@/db/schema';
 import type { HabitView } from '@/context/AppContext';
 
@@ -26,27 +28,44 @@ export interface LogDraft {
   moodTag: MoodTag | null;
   contextTag: ContextTag | null;
   notes: string | null;
+  /** An intentional, user-chosen skip — doesn't break a streak, excluded
+   *  from the consistency rate. Distinct from an ordinary miss. */
+  skipped?: boolean;
 }
 
 /**
  * Log Habit (ui-spec.md §8) — the detailed entry path, as opposed to Home's
  * quick toggle. Nothing is written until Save.
  *
- * The important state here is the time-constraint LOCKOUT: when canLogToday()
- * is false, the Completed path is disabled with explanatory copy — not just a
- * dimmed button, since the reason isn't otherwise obvious. Skipped stays
- * available, with mood and context, because a skip is still useful data.
+ * Time windows no longer block anything here: a completion after the window
+ * closes is still allowed, just flagged late — the habit still counts
+ * toward the streak (lib/timeConstraint.ts v2). "Skipped" is the
+ * intentional-skip path: unlike simply not logging (which the nightly
+ * backfill later records as an ordinary miss), choosing Skipped here writes
+ * a log that doesn't break a streak and is excluded from the consistency
+ * rate.
+ *
+ * Passing a `date` other than today puts this in backfill mode
+ * (data-model.md's 7-day backfill window) — the window/lateness messaging
+ * doesn't apply to a day being logged after the fact.
  */
 export function LogHabitSheet({
   habit,
   open,
   onOpenChange,
   onSave,
+  date,
 }: {
   habit: HabitView | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (habitId: number, draft: LogDraft) => Promise<void>;
+  onSave: (
+    habitId: number,
+    draft: LogDraft,
+    date?: string,
+  ) => Promise<{ onTime: boolean | null; completionTime: string } | void>;
+  /** Defaults to today; anything else is a backfilled past entry. */
+  date?: string;
 }) {
   const reduce = useReducedMotion();
   const [completed, setCompleted] = useState(true);
@@ -55,18 +74,19 @@ export function LogHabitSheet({
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const locked = habit?.locked ?? false;
+  const targetDate = date ?? todayKey();
+  const isBackfill = targetDate !== todayKey();
+  const late = !isBackfill && habit ? isPastWindow(habit.timeConstraint) : false;
 
   useEffect(() => {
     if (!open || !habit) return;
     const existing = habit.todayLog;
-    // Locked habits cannot start on the Completed path (§8 disabled state).
-    setCompleted(locked ? false : existing?.completed !== 0);
+    setCompleted(isBackfill ? true : (existing?.completed !== 0));
     setMood((existing?.moodTag as MoodTag | null) ?? null);
     setContext(existing?.contextTag ?? null);
     setNotes(existing?.notes ?? '');
     setSaving(false);
-  }, [open, habit, locked]);
+  }, [open, habit, isBackfill]);
 
   if (!habit) return null;
 
@@ -74,12 +94,17 @@ export function LogHabitSheet({
     if (!habit) return;
     setSaving(true);
     try {
-      await onSave(habit.id, {
-        completed,
-        moodTag: mood,
-        contextTag: context,
-        notes: notes.trim() ? notes.trim().slice(0, NOTES_MAX) : null,
-      });
+      await onSave(
+        habit.id,
+        {
+          completed,
+          skipped: !completed,
+          moodTag: mood,
+          contextTag: context,
+          notes: notes.trim() ? notes.trim().slice(0, NOTES_MAX) : null,
+        },
+        targetDate,
+      );
       onOpenChange(false);
     } catch {
       setSaving(false);
@@ -87,15 +112,19 @@ export function LogHabitSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange} title={habit.name} description="Log Today">
+    <Sheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={habit.name}
+      description={isBackfill ? `Logging for ${format(new Date(targetDate + 'T00:00:00'), 'MMMM d')}` : 'Log Today'}
+    >
       <div className="flex flex-col gap-6">
         {/* Completed / Skipped — the primary decision, two large buttons. */}
         <div className="grid grid-cols-2 gap-3">
           <BigToggle
             selected={completed}
-            disabled={locked}
             onSelect={() => setCompleted(true)}
-            icon={locked ? <Lock size={20} aria-hidden /> : <Check size={20} aria-hidden />}
+            icon={<Check size={20} aria-hidden />}
             label="Completed"
             tone="positive"
           />
@@ -108,20 +137,38 @@ export function LogHabitSheet({
           />
         </div>
 
-        {locked && (
+        {late && completed && (
           <p
             role="status"
             className={cn(
-              'flex items-start gap-2 rounded-[var(--radius-block)] bg-bg-secondary p-3',
-              'text-footnote text-label-secondary',
+              'flex items-start gap-2 rounded-[var(--radius-block)] p-3',
+              'text-footnote',
             )}
+            style={{ backgroundColor: 'rgba(255,122,0,0.12)', color: semantic.warning }}
           >
-            <Lock size={14} className="mt-1 shrink-0" aria-hidden />
+            <Clock size={14} className="mt-1 shrink-0" aria-hidden />
             <span>
-              Logging closed — deadline was{' '}
-              {habit.timeConstraint ? formatHHmm(habit.timeConstraint) : 'earlier today'}. You can
-              still record a skip, and today counts as missed.
+              This will be logged as <b>late</b> — its window closed at{' '}
+              {habit.timeConstraint ? formatHHmm(habit.timeConstraint) : 'earlier today'}. It still
+              counts toward your streak.
             </span>
+          </p>
+        )}
+
+        {isBackfill && (
+          <p
+            role="status"
+            className="flex items-start gap-2 rounded-[var(--radius-block)] bg-bg-secondary p-3 text-footnote text-label-secondary"
+          >
+            <Clock size={14} className="mt-1 shrink-0" aria-hidden />
+            <span>Backfilling a past day — momentum recalculates from the full history either way.</span>
+          </p>
+        )}
+
+        {!completed && (
+          <p className="text-footnote text-label-secondary">
+            Marking this a skip won&rsquo;t break your streak, but it also won&rsquo;t count toward
+            your consistency rate — use it for a day you deliberately took off, not one you forgot.
           </p>
         )}
 

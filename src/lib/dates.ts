@@ -18,6 +18,15 @@ export function yesterdayKey(): string {
   return toDayKey(addDays(new Date(), -1));
 }
 
+export function tomorrowKey(): string {
+  return toDayKey(addDays(new Date(), 1));
+}
+
+/** The day key `n` days before today, local time — e.g. daysAgoKey(7) for a backfill cutoff. */
+export function daysAgoKey(n: number): string {
+  return toDayKey(addDays(new Date(), -n));
+}
+
 /**
  * The day key immediately before `key`, in LOCAL time.
  *

@@ -2,7 +2,7 @@
 
 import { use, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Flame, Pencil, NotebookPen, Timer } from 'lucide-react';
+import { Flame, Pencil, NotebookPen, Timer, Pause, Play } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Screen, PushedHeader, PageFade } from '@/components/ui/Screen';
 import { Button, IconButton } from '@/components/ui/Button';
@@ -16,9 +16,11 @@ import { AddHabitSheet } from '@/components/habit/AddHabitSheet';
 import { LogHabitSheet } from '@/components/habit/LogHabitSheet';
 import { habitInsight, MIN_LOGS_FOR_INSIGHT } from '@/lib/insights';
 import { checkAdaptiveDifficulty } from '@/lib/momentum';
-import { todayKey } from '@/lib/dates';
+import { bestStreakEver } from '@/lib/achievements';
+import { minutesUntilWindowClose, isWindowClosingSoon, formatCountdown } from '@/lib/timeConstraint';
+import { todayKey, daysAgoKey } from '@/lib/dates';
 import type { DifficultyLevel } from '@/db/schema';
-import { MOOD_LABELS, MOOD_COLORS, chartHex, onChartHex, palette } from '@/theme/theme';
+import { MOOD_LABELS, MOOD_COLORS, chartHex, onChartHex, palette, semantic } from '@/theme/theme';
 import { formatHHmm } from '@/lib/dates';
 import { format } from 'date-fns';
 import { cn } from '@/lib/cn';
@@ -40,7 +42,7 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const habitId = Number(id);
   const router = useRouter();
-  const { status, errorMessage, retry, habits, editHabit, removeHabit, chainNamesForHabit, saveLog, dismissSuggestion } =
+  const { status, errorMessage, retry, habits, editHabit, removeHabit, chainNamesForHabit, saveLog, dismissSuggestion, pauseHabit, resumeHabit } =
     useApp();
 
   const [editOpen, setEditOpen] = useState(false);
@@ -48,7 +50,11 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
   // lower difficulty without ever writing it until the user confirms Save.
   const [editPrefillLevel, setEditPrefillLevel] = useState<DifficultyLevel | null>(null);
   const [logOpen, setLogOpen] = useState(false);
+  // Set when Log Today is opened from the day-detail popover's backfill
+  // action; undefined means "today" (LogHabitSheet's own default).
+  const [logDate, setLogDate] = useState<string | undefined>(undefined);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmPause, setConfirmPause] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const habit = habits.find((h) => h.id === habitId);
@@ -108,6 +114,15 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
   const heroFg = onChartHex(habit.chartColor);
   // Black can be dimmed on the light hues and still clear AA; white on blue can't.
   const muted = heroFg === palette.ink0 ? 'opacity-70' : '';
+  const paused = habit.pausedAt !== null;
+  const best = bestStreakEver(habit.logs);
+  const done = habit.todayLog?.completed === 1;
+  const countdownMins = !done ? minutesUntilWindowClose(habit.timeConstraint) : null;
+  const closingSoon = !done && isWindowClosingSoon(habit.timeConstraint);
+  // Backfill window: today's own entry uses the normal Log Today button;
+  // anything from yesterday back to 7 days ago is eligible from the calendar.
+  const earliestBackfill = daysAgoKey(7);
+  const canBackfill = (day: string) => day < todayKey() && day >= earliestBackfill;
 
   return (
     <Screen>
@@ -137,13 +152,13 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               {habit.categoryTag && <p className={cn('font-data', muted)}>{habit.categoryTag}</p>}
-              {/* Streak: stat pattern. */}
+              {/* Streak: stat pattern, current + best side by side. */}
               <div className="mt-6 flex items-baseline gap-2">
                 <span className="font-display-hero text-[56px] leading-none">{habit.streak}</span>
                 <Flame size={20} aria-hidden className={muted} />
               </div>
               <p className={cn('font-data mt-2', muted)}>
-                day{habit.streak === 1 ? '' : 's'} running
+                day{habit.streak === 1 ? '' : 's'} running · best {best}
               </p>
             </div>
             <MomentumRing
@@ -161,7 +176,11 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
             {[
               DIFFICULTY_NAMES[habit.difficultyLevel],
               habit.frequency,
-              habit.timeConstraint ? `by ${formatHHmm(habit.timeConstraint)}` : null,
+              habit.windowStart && habit.timeConstraint
+                ? `${formatHHmm(habit.windowStart)}\u2013${formatHHmm(habit.timeConstraint)}`
+                : habit.timeConstraint
+                  ? `by ${formatHHmm(habit.timeConstraint)}`
+                  : null,
             ]
               .filter(Boolean)
               .map((chip) => (
@@ -173,29 +192,58 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
                   {chip}
                 </span>
               ))}
+            {paused && (
+              <span className="font-data rounded-[var(--radius-pill)] bg-black/30 px-3 py-2">
+                Paused
+              </span>
+            )}
+            {!paused && !done && habit.timeConstraint && (
+              <span className="font-data rounded-[var(--radius-pill)] bg-black/30 px-3 py-2">
+                {habit.locked
+                  ? 'Logging late'
+                  : countdownMins !== null
+                    ? `${formatCountdown(countdownMins)}${closingSoon ? ' \u00b7 closing soon' : ''}`
+                    : null}
+              </span>
+            )}
           </div>
 
-          <div className="mt-6 flex gap-3">
+          {paused ? (
             <Button
-              onClick={() => setLogOpen(true)}
               fullWidth
+              className="mt-6"
               style={{ backgroundColor: heroFg, color: heroBg }}
+              onClick={() => void resumeHabit(habit.id)}
             >
-              <NotebookPen size={18} aria-hidden />
-              Log today
+              <Play size={18} aria-hidden />
+              Resume Habit
             </Button>
-            {/* This habit's own focus mode — Pomodoro pre-linked, so timing
-                and logging one habit never means hunting through the picker
-                on the shared Focus screen. */}
-            <IconButton
-              label={`Start a focus session for ${habit.name}`}
-              onClick={() => router.push(`/focus?habit=${habit.id}`)}
-              className="border-2"
-              style={{ borderColor: 'rgba(0,0,0,0.2)', color: heroFg }}
-            >
-              <Timer size={20} aria-hidden />
-            </IconButton>
-          </div>
+          ) : (
+            <div className="mt-6 flex gap-3">
+              <Button
+                onClick={() => {
+                  setLogDate(undefined);
+                  setLogOpen(true);
+                }}
+                fullWidth
+                style={{ backgroundColor: heroFg, color: heroBg }}
+              >
+                <NotebookPen size={18} aria-hidden />
+                Log today
+              </Button>
+              {/* This habit's own focus mode — Pomodoro pre-linked, so timing
+                  and logging one habit never means hunting through the picker
+                  on the shared Focus screen. */}
+              <IconButton
+                label={`Start a focus session for ${habit.name}`}
+                onClick={() => router.push(`/focus?habit=${habit.id}`)}
+                className="border-2"
+                style={{ borderColor: 'rgba(0,0,0,0.2)', color: heroFg }}
+              >
+                <Timer size={20} aria-hidden />
+              </IconButton>
+            </div>
+          )}
         </section>
 
         {suggestion !== null && (
@@ -243,8 +291,19 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
           )}
         </section>
 
-        {/* Destructive, deliberately lowest visual weight on the screen. */}
-        <section className="border-t border-white/[0.07] pt-6">
+        {/* Destructive/pause, deliberately lowest visual weight on the screen. */}
+        <section className="flex flex-wrap gap-3 border-t border-white/[0.07] pt-6">
+          {paused ? (
+            <Button variant="secondary" onClick={() => void resumeHabit(habit.id)}>
+              <Play size={16} aria-hidden />
+              Resume Habit
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={() => setConfirmPause(true)}>
+              <Pause size={16} aria-hidden />
+              Pause Habit
+            </Button>
+          )}
           <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
             Delete Habit
           </Button>
@@ -262,7 +321,7 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
           <dl className="flex flex-col gap-5">
             <div>
               <dt className="font-data text-label-tertiary">Status</dt>
-              <dd className="mt-2">
+              <dd className="mt-2 flex flex-wrap items-center gap-2">
                 <span
                   className="font-display inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] px-4 text-[15px] uppercase tracking-[0.04em]"
                   style={
@@ -271,8 +330,19 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
                       : { backgroundColor: palette.ink4, color: palette.white }
                   }
                 >
-                  {selectedLog.completed === 1 ? 'Completed' : 'Missed'}
+                  {selectedLog.completed === 1 ? 'Completed' : selectedLog.skipped ? 'Skipped' : 'Missed'}
                 </span>
+                {selectedLog.completed === 1 && selectedLog.onTime !== null && (
+                  <span
+                    className="font-data rounded-[var(--radius-pill)] px-3 py-2"
+                    style={{
+                      backgroundColor: selectedLog.onTime ? 'rgba(52,208,88,0.15)' : 'rgba(255,122,0,0.15)',
+                      color: selectedLog.onTime ? semantic.positive : semantic.warning,
+                    }}
+                  >
+                    {selectedLog.onTime ? 'On time' : 'Late'}
+                  </span>
+                )}
               </dd>
             </div>
             <div>
@@ -310,7 +380,26 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </dl>
         ) : (
-          <p className="text-body leading-relaxed text-label-secondary">Nothing was logged on this day.</p>
+          <div className="flex flex-col items-start gap-4">
+            <p className="text-body leading-relaxed text-label-secondary">
+              Nothing was logged on this day.
+            </p>
+            {/* Backfill (data-model): up to 7 days back, for a day you forgot
+                to log at the time. */}
+            {selectedDay && canBackfill(selectedDay) && (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setLogDate(selectedDay);
+                  setSelectedDay(null);
+                  setLogOpen(true);
+                }}
+              >
+                <NotebookPen size={16} aria-hidden />
+                Log This Day
+              </Button>
+            )}
+          </div>
         )}
       </Sheet>
 
@@ -326,6 +415,7 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
           frequency: habit.frequency,
           difficultyLevel: editPrefillLevel ?? habit.difficultyLevel,
           timeConstraint: habit.timeConstraint,
+          windowStart: habit.windowStart,
           categoryTag: habit.categoryTag,
         }}
         onSubmit={async (draft) => {
@@ -337,8 +427,24 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
       <LogHabitSheet
         habit={habit}
         open={logOpen}
-        onOpenChange={setLogOpen}
+        onOpenChange={(o) => {
+          setLogOpen(o);
+          if (!o) setLogDate(undefined);
+        }}
         onSave={saveLog}
+        date={logDate}
+      />
+
+      <ConfirmDialog
+        open={confirmPause}
+        onOpenChange={setConfirmPause}
+        title={`Pause ${habit.name}?`}
+        body="Momentum freezes exactly where it is — no misses, no decay — until you resume. It won't show up as due while paused."
+        confirmLabel="Pause Habit"
+        onConfirm={() => {
+          setConfirmPause(false);
+          void pauseHabit(habit.id);
+        }}
       />
 
       <ConfirmDialog

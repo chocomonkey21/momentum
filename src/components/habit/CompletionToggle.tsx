@@ -2,8 +2,7 @@
 
 import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState } from 'react';
-import { Check, Lock } from 'lucide-react';
-import { cn } from '@/lib/cn';
+import { Check, Clock } from 'lucide-react';
 import { spring, reducedFade, palette } from '@/theme/theme';
 
 /**
@@ -27,6 +26,8 @@ export function CompletionToggle({
   habitName,
   accent,
   onAccent = palette.white,
+  /** Past its time window and not done yet — informational only. Tapping
+   *  still completes it (late), it just gets a distinct, quieter look. */
   locked = false,
   lockedReason,
   size = 48,
@@ -52,7 +53,7 @@ export function CompletionToggle({
   const radius = size / 2;
 
   function press() {
-    if (locked) return;
+    // Late no longer blocks the tap — it still counts, just flagged.
     const next = !optimistic;
     setOptimistic(next);
     if (next && !reduce) {
@@ -60,19 +61,6 @@ export function CompletionToggle({
       setTimeout(() => setPulse(false), 450);
     }
     onToggle(next);
-  }
-
-  if (locked) {
-    return (
-      <span
-        aria-hidden="true"
-        title={lockedReason}
-        className="inline-flex shrink-0 items-center justify-center border-2 border-ink5 bg-ink3 opacity-50"
-        style={{ width: size, height: size, borderRadius: radius }}
-      >
-        <Lock size={size * 0.38} className="text-label-tertiary" />
-      </span>
-    );
   }
 
   return (
@@ -93,15 +81,24 @@ export function CompletionToggle({
       animate={pulse ? { scale: [1.16, 1] } : { scale: 1 }}
       transition={reduce ? reducedFade : spring.bouncy}
       whileHover={reduce ? undefined : { scale: 1.05 }}
+      title={!isOn && locked ? lockedReason : undefined}
       className="relative inline-flex shrink-0 items-center justify-center border-2 transition-colors duration-200"
       style={{
         width: size,
         height: size,
         borderRadius: radius,
-        backgroundColor: isOn ? accent : 'rgba(255,255,255,0.04)',
-        borderColor: isOn ? accent : 'rgba(255,255,255,0.18)',
+        backgroundColor: isOn ? accent : locked ? 'rgba(255,122,0,0.12)' : 'rgba(255,255,255,0.04)',
+        borderColor: isOn ? accent : locked ? 'var(--color-app-orange)' : 'rgba(255,255,255,0.18)',
       }}
     >
+      {!isOn && locked && (
+        <Clock
+          size={size * 0.4}
+          className="pointer-events-none absolute"
+          style={{ color: 'var(--color-app-orange)' }}
+          aria-hidden
+        />
+      )}
       <AnimatePresence>
         {pulse && (
           <motion.span

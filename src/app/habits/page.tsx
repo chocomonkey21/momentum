@@ -150,7 +150,9 @@ function HabitsScreen() {
               />
             ) : (
               <ul className="flex flex-col gap-3">
-                {habits.map((habit) => {
+                {/* Dashboard sort: strongest momentum first, so a glance says
+                    what's carrying the day and what needs attention. */}
+                {[...habits].sort((a, b) => b.momentumScore - a.momentumScore).map((habit) => {
                   const stat = statFor(habit);
                   // MomentumService.checkAdaptiveDifficulty — 3+ consecutive
                   // misses, suppressed while a "Not now" dismissal is active.

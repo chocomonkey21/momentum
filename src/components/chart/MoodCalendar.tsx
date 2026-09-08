@@ -248,8 +248,11 @@ export function StreakDotRow({ logs, days = 21 }: { logs: HabitLog[]; days?: num
  */
 export function MoodStatsFooter({ logs }: { logs: HabitLog[] }) {
   const stats = useMemo(() => {
-    const logged = logs.length;
-    const done = logs.filter((l) => l.completed === 1).length;
+    // A deliberate skip doesn't count toward consistency — it's neither a
+    // completion nor a miss, so it's excluded from "Logged"/"Done %" here.
+    const counted = logs.filter((l) => !l.skipped);
+    const logged = counted.length;
+    const done = counted.filter((l) => l.completed === 1).length;
     const donePct = logged === 0 ? 0 : Math.round((done / logged) * 100);
 
     const moodCounts = new Map<MoodTag, number>();
@@ -265,11 +268,14 @@ export function MoodStatsFooter({ logs }: { logs: HabitLog[] }) {
       }
     }
 
-    // Longest run of consecutive missed days — the "max gap" figure.
+    // Longest run of consecutive missed days — the "max gap" figure. A
+    // skipped day is neutral: it doesn't extend a gap, but doesn't reset it
+    // either (mirrors the momentum replay's pause/skip handling).
     const ordered = [...logs].sort((a, b) => a.date.localeCompare(b.date));
     let gap = 0;
     let maxGap = 0;
     for (const l of ordered) {
+      if (l.skipped) continue;
       if (l.completed === 1) gap = 0;
       else {
         gap += 1;

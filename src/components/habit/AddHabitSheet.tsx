@@ -40,6 +40,8 @@ export interface HabitDraft {
   frequency: Frequency;
   difficultyLevel: DifficultyLevel;
   timeConstraint: string | null;
+  /** Window START — only meaningful alongside timeConstraint (the window's end). */
+  windowStart: string | null;
   categoryTag: string | null;
 }
 
@@ -70,6 +72,8 @@ export function AddHabitSheet({
   const [category, setCategory] = useState<string | null>(initial?.categoryTag ?? null);
   const [constraintOn, setConstraintOn] = useState(Boolean(initial?.timeConstraint));
   const [time, setTime] = useState(initial?.timeConstraint ?? '09:00');
+  const [useWindow, setUseWindow] = useState(Boolean(initial?.windowStart));
+  const [startTime, setStartTime] = useState(initial?.windowStart ?? '09:00');
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -83,6 +87,8 @@ export function AddHabitSheet({
     setCategory(initial?.categoryTag ?? null);
     setConstraintOn(Boolean(initial?.timeConstraint));
     setTime(initial?.timeConstraint ?? '09:00');
+    setUseWindow(Boolean(initial?.windowStart));
+    setStartTime(initial?.windowStart ?? '09:00');
     setError(null);
     setSaving(false);
     // Name is the primary and often only required field — focus it on mount.
@@ -104,6 +110,12 @@ export function AddHabitSheet({
       nameRef.current?.focus();
       return;
     }
+    if (constraintOn && useWindow && startTime >= time) {
+      setError('The window start must be before its end time.');
+      setShake(true);
+      setTimeout(() => setShake(false), 220);
+      return;
+    }
     setSaving(true);
     try {
       await onSubmit({
@@ -111,6 +123,7 @@ export function AddHabitSheet({
         frequency,
         difficultyLevel: difficulty,
         timeConstraint: parsed.data.timeConstraint,
+        windowStart: constraintOn && useWindow ? startTime : null,
         categoryTag: category,
       });
       onOpenChange(false);
@@ -231,9 +244,9 @@ export function AddHabitSheet({
         <div>
           <label className="flex min-h-[44px] cursor-pointer items-center justify-between gap-4">
             <span>
-              <span className="block text-body text-label-primary">Time Constraint</span>
+              <span className="block text-body text-label-primary">Time Window</span>
               <span className="block text-footnote text-label-secondary">
-                Block logging after a deadline each day
+                Flag it late (it still counts) if logged after a deadline each day
               </span>
             </span>
             <input
@@ -253,21 +266,71 @@ export function AddHabitSheet({
                 transition={reduce ? reducedFade : spring.default}
                 className="overflow-hidden"
               >
-                <div className="pt-3">
-                  <label htmlFor="habit-time" className="sr-only">
-                    Deadline time
+                <div className="flex flex-col gap-3 pt-3">
+                  <label className="flex min-h-[36px] cursor-pointer items-center justify-between gap-4">
+                    <span className="text-footnote text-label-secondary">
+                      Add a start time too, to make it a window
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={useWindow}
+                      onChange={(e) => setUseWindow(e.target.checked)}
+                      className="toggle"
+                    />
                   </label>
-                  <input
-                    id="habit-time"
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className={cn(
-                      'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-4',
-                      'text-body text-label-primary [color-scheme:dark]',
-                      'border border-transparent focus:border-tint',
-                    )}
-                  />
+                  {useWindow ? (
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <label htmlFor="habit-window-start" className="font-data mb-2 block text-label-tertiary">
+                          Starts
+                        </label>
+                        <input
+                          id="habit-window-start"
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className={cn(
+                            'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-4',
+                            'text-body text-label-primary [color-scheme:dark]',
+                            'border border-transparent focus:border-tint',
+                          )}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label htmlFor="habit-time" className="font-data mb-2 block text-label-tertiary">
+                          Ends
+                        </label>
+                        <input
+                          id="habit-time"
+                          type="time"
+                          value={time}
+                          onChange={(e) => setTime(e.target.value)}
+                          className={cn(
+                            'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-4',
+                            'text-body text-label-primary [color-scheme:dark]',
+                            'border border-transparent focus:border-tint',
+                          )}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label htmlFor="habit-time" className="sr-only">
+                        Deadline
+                      </label>
+                      <input
+                        id="habit-time"
+                        type="time"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                        className={cn(
+                          'w-full rounded-[var(--radius-block)] bg-white/[0.05] px-4 py-4',
+                          'text-body text-label-primary [color-scheme:dark]',
+                          'border border-transparent focus:border-tint',
+                        )}
+                      />
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}

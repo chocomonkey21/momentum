@@ -68,11 +68,14 @@ export function computeAchievements(input: {
 }
 
 /** Best uninterrupted completed run across a habit's full history. */
-export function bestStreakEver(logs: Pick<HabitLog, 'date' | 'completed'>[]): number {
+export function bestStreakEver(
+  logs: (Pick<HabitLog, 'date' | 'completed'> & { skipped?: boolean })[],
+): number {
   const ordered = [...logs].sort((a, b) => a.date.localeCompare(b.date));
   let best = 0;
   let run = 0;
   for (const log of ordered) {
+    if (log.skipped) continue; // transparent — neither extends nor breaks the run
     if (log.completed === 1) {
       run += 1;
       best = Math.max(best, run);

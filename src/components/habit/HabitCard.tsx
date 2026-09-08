@@ -2,10 +2,11 @@
 
 import { memo, useState } from 'react';
 import { motion, useReducedMotion, useMotionValue, animate } from 'framer-motion';
-import { Flame, Trash2, Clock, Lock } from 'lucide-react';
+import { Flame, Trash2, Clock, TrendingDown } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { spring, reducedFade, chartHex, onChartHex, semantic, palette } from '@/theme/theme';
 import { formatHHmm } from '@/lib/dates';
+import { minutesUntilWindowClose, isWindowClosingSoon, formatCountdown } from '@/lib/timeConstraint';
 import { CompletionToggle } from './CompletionToggle';
 import { ContributionGrid } from '@/components/chart/ContributionGrid';
 import type { HabitView } from '@/context/AppContext';
@@ -55,6 +56,8 @@ export const HabitCard = memo(function HabitCard({
   const accent = chartHex(habit.chartColor);
   const onAccent = onChartHex(habit.chartColor);
   const done = habit.todayLog?.completed === 1;
+  const countdownMins = !done ? minutesUntilWindowClose(habit.timeConstraint) : null;
+  const closingSoon = !done && isWindowClosingSoon(habit.timeConstraint);
 
   return (
     <div className="relative">
@@ -107,7 +110,7 @@ export const HabitCard = memo(function HabitCard({
             locked={locked}
             lockedReason={
               habit.timeConstraint
-                ? `Logging closed — deadline was ${formatHHmm(habit.timeConstraint)}`
+                ? `Late — window closed at ${formatHHmm(habit.timeConstraint)}. Tap to log it anyway.`
                 : undefined
             }
           />
@@ -135,19 +138,29 @@ export const HabitCard = memo(function HabitCard({
                   {habit.streak === 1 ? '' : 's'}
                 </span>
               )}
-              {habit.timeConstraint && (
+              {habit.timeConstraint && !done && (
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1 text-footnote',
+                    closingSoon && 'font-semibold',
+                  )}
+                  style={{ color: locked ? 'var(--color-app-orange)' : semantic.warning }}
+                >
+                  <Clock size={12} aria-hidden />
+                  {locked
+                    ? `Late — was due ${formatHHmm(habit.timeConstraint)}`
+                    : countdownMins !== null
+                      ? `${formatCountdown(countdownMins)}${closingSoon ? ' · closing soon' : ''}`
+                      : `by ${formatHHmm(habit.timeConstraint)}`}
+                </span>
+              )}
+              {habit.isAtRisk && (
                 <span
                   className="inline-flex items-center gap-1 text-footnote"
-                  style={{
-                    color: locked
-                      ? semantic.labelTertiary
-                      : done
-                        ? semantic.labelSecondary
-                        : semantic.warning,
-                  }}
+                  style={{ color: palette.vermillion }}
                 >
-                  {locked ? <Lock size={12} aria-hidden /> : <Clock size={12} aria-hidden />}
-                  {locked ? 'Closed' : `by ${formatHHmm(habit.timeConstraint)}`}
+                  <TrendingDown size={12} aria-hidden />
+                  At risk
                 </span>
               )}
             </div>

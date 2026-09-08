@@ -1,11 +1,13 @@
 import type { HabitLog, DifficultyLevel } from '@/db/schema';
-import { todayKey, previousDayKey } from './dates';
+import { todayKey, previousDayKey, dayKeyRange, toDayKey } from './dates';
 
 /** data-model.md §4.1 — the core mechanic. Exact constants, not approximations. */
 export const MAX_MOMENTUM = 100;
 export const STARTING_MOMENTUM = 50;
 export const GAIN = 8;
 export const DECAY = 12;
+
+type MomentumLog = Pick<HabitLog, 'date' | 'completed'> & { skipped?: boolean };
 
 /** Single-step update, exactly as specified in data-model.md §4.1. */
 export function updateMomentum(score: number, completedToday: boolean): number {
@@ -29,14 +31,24 @@ export function updateMomentum(score: number, completedToday: boolean): number {
  * ("undo restores the pre-completion value exactly, no decay penalty") fall out
  * of the replay naturally instead of needing a special case. The miss penalty
  * for today lands at end-of-day evaluation (§4.4) once today becomes a past day.
+ *
+ * Two day-types are neutral — neither GAIN nor DECAY applies:
+ *  - `skipped` logs: an intentional, user-chosen skip. It's recorded (so the
+ *    calendar shows it), but it doesn't cost momentum.
+ *  - any day on/after `pausedAt`: pausing a habit freezes it exactly where it
+ *    was — no penalty accrues while it's paused, and nothing here assumes the
+ *    habit resumes on any particular day.
  */
 export function replayMomentum(
-  logs: Pick<HabitLog, 'date' | 'completed'>[],
+  logs: MomentumLog[],
   today: string = todayKey(),
+  pausedAt: string | null = null,
 ): number {
   const ordered = [...logs].sort((a, b) => a.date.localeCompare(b.date));
   let score = STARTING_MOMENTUM;
   for (const log of ordered) {
+    if (pausedAt && log.date >= pausedAt) continue;
+    if (log.skipped) continue;
     if (log.completed === 1) score = Math.min(MAX_MOMENTUM, score + GAIN);
     else if (log.date < today) score = Math.max(0, score - DECAY);
   }
@@ -51,16 +63,21 @@ export function replayMomentum(
  * ASSUMPTION: today's incomplete log is excluded, mirroring replayMomentum's
  * treatment of today — an un-acted-on today shouldn't push a habit into an
  * adaptive-difficulty suggestion before the day has actually ended.
+ *
+ * A `skipped` day is transparent: it neither counts as a miss nor breaks the
+ * run, so a skip in the middle of a rough week doesn't itself trigger (or
+ * hide) an adaptive-difficulty suggestion.
  */
-export function missStreak(
-  logs: Pick<HabitLog, 'date' | 'completed'>[],
-  today: string = todayKey(),
-): number {
+export function missStreak(logs: MomentumLog[], today: string = todayKey()): number {
   const past = logs.filter((l) => l.date < today).sort((a, b) => b.date.localeCompare(a.date));
   let count = 0;
   let expected: string | null = null;
   for (const log of past) {
     if (expected !== null && log.date !== expected) break; // gap
+    if (log.skipped) {
+      expected = previousDayKey(log.date);
+      continue;
+    }
     if (log.completed === 1) break;
     count += 1;
     expected = previousDayKey(log.date);
@@ -82,15 +99,17 @@ export function adaptiveDifficultySuggestion(
  * Momentum value at the end of each day in `dayKeys`, replaying the same
  * formula as `replayMomentum` so the chart can never disagree with the number
  * on the habit card (user-flows.md §10 — the audited "82% vs four 100% rows"
- * bug was exactly this kind of divergence).
+ * bug was exactly this kind of divergence). Skipped days and any day on/after
+ * `pausedAt` are neutral, matching replayMomentum.
  *
  * Days before the habit's first log are returned as null so Recharts leaves a
  * gap rather than drawing a flat line back to the start of the window.
  */
 export function momentumSeries(
-  logs: Pick<HabitLog, 'date' | 'completed'>[],
+  logs: MomentumLog[],
   dayKeys: string[],
   today: string = todayKey(),
+  pausedAt: string | null = null,
 ): (number | null)[] {
   const byDate = new Map(logs.map((l) => [l.date, l]));
   const firstLogged = logs.reduce<string | null>(
@@ -103,19 +122,43 @@ export function momentumSeries(
   const windowStart = dayKeys[0];
   for (const log of [...logs].sort((a, b) => a.date.localeCompare(b.date))) {
     if (windowStart !== undefined && log.date >= windowStart) break;
+    if (pausedAt && log.date >= pausedAt) continue;
+    if (log.skipped) continue;
     if (log.completed === 1) score = Math.min(MAX_MOMENTUM, score + GAIN);
     else if (log.date < today) score = Math.max(0, score - DECAY);
   }
 
   return dayKeys.map((key) => {
     const log = byDate.get(key);
-    if (log) {
+    if (log && !(pausedAt && key >= pausedAt) && !log.skipped) {
       if (log.completed === 1) score = Math.min(MAX_MOMENTUM, score + GAIN);
       else if (key < today) score = Math.max(0, score - DECAY);
     }
     if (firstLogged === null || key < firstLogged) return null;
     return score;
   });
+}
+
+/**
+ * "At-risk" — momentum has strictly declined for at least `days` consecutive
+ * days up to and including today. A UI-level signal only; it never feeds
+ * back into the score itself.
+ */
+export function isMomentumDeclining(
+  logs: MomentumLog[],
+  days = 3,
+  today: string = todayKey(),
+  pausedAt: string | null = null,
+): boolean {
+  if (pausedAt) return false; // a paused habit is frozen, never "at risk"
+  const start = toDayKey(new Date(new Date(today + 'T00:00:00').getTime() - days * 86400000));
+  const keys = dayKeyRange(start, today);
+  const series = momentumSeries(logs, keys, today, pausedAt);
+  if (series.some((v) => v === null)) return false; // not enough history yet
+  for (let i = 1; i < series.length; i++) {
+    if ((series[i] as number) >= (series[i - 1] as number)) return false;
+  }
+  return true;
 }
 
 /** Ring fill color: tint, transitioning to positive as the score climbs past 70.
@@ -139,7 +182,7 @@ export interface AdaptiveDifficultySuggestion {
  */
 export function checkAdaptiveDifficulty(habit: {
   difficultyLevel: DifficultyLevel;
-  logs: Pick<HabitLog, 'date' | 'completed'>[];
+  logs: MomentumLog[];
 }): AdaptiveDifficultySuggestion | null {
   const missStreakDays = missStreak(habit.logs);
   const suggestedLevel = adaptiveDifficultySuggestion(habit.difficultyLevel, missStreakDays);

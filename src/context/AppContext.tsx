@@ -15,8 +15,8 @@ import * as q from '@/db/queries';
 import { useAuth } from './AuthContext';
 import { todayKey } from '@/lib/dates';
 import { currentStreak } from '@/lib/streak';
-import { missStreak } from '@/lib/momentum';
-import { canLogToday } from '@/lib/timeConstraint';
+import { missStreak, isMomentumDeclining } from '@/lib/momentum';
+import { isPastWindow, isOnTime } from '@/lib/timeConstraint';
 import { ACHIEVEMENT_DEFINITIONS, type AchievementDefinition, type AchievementType } from '@/lib/achievements';
 
 /**
@@ -42,8 +42,15 @@ export interface HabitView extends Habit {
   streak: number;
   missStreak: number;
   isDueToday: boolean;
-  /** True once today's time constraint has passed (data-model.md §4.3). */
+  /**
+   * True once the habit's time window has closed for today and it isn't
+   * done yet. Informational only — logging late is allowed (and flagged),
+   * not blocked; see lib/timeConstraint.ts.
+   */
   locked: boolean;
+  /** Momentum has strictly declined for 3+ consecutive days — a dashboard
+   *  highlight, never a scoring input. */
+  isAtRisk: boolean;
 }
 
 interface HabitDraft {
@@ -51,6 +58,7 @@ interface HabitDraft {
   frequency: Frequency;
   difficultyLevel: DifficultyLevel;
   timeConstraint: string | null;
+  windowStart?: string | null;
   categoryTag: string | null;
 }
 
@@ -71,7 +79,10 @@ interface AppValue {
   showToast: (message: string, actionLabel?: string, onAction?: () => void) => void;
   dismissToast: () => void;
   refresh: () => Promise<void>;
-  setCompletion: (habitId: number, completed: boolean) => Promise<void>;
+  setCompletion: (
+    habitId: number,
+    completed: boolean,
+  ) => Promise<{ onTime: boolean | null; completionTime: string } | void>;
   /** Set once, app-wide, whenever an achievement threshold is newly crossed —
    *  drives the celebration overlay mounted in AuthGate. */
   celebration: AchievementDefinition | null;
@@ -87,12 +98,17 @@ interface AppValue {
       moodTag: MoodTag | null;
       contextTag: ContextTag | null;
       notes: string | null;
+      /** An intentional, user-chosen skip — see lib/streak.ts. */
+      skipped?: boolean;
     },
     date?: string,
-  ) => Promise<void>;
+  ) => Promise<{ onTime: boolean | null; completionTime: string } | void>;
   addHabit: (draft: HabitDraft) => Promise<void>;
   editHabit: (habitId: number, draft: HabitDraft) => Promise<void>;
   removeHabit: (habitId: number) => Promise<void>;
+  /** Freezes momentum: no new misses accrue, no decay, until resumed. */
+  pauseHabit: (habitId: number) => Promise<void>;
+  resumeHabit: (habitId: number) => Promise<void>;
   chainNamesForHabit: (habitId: number) => string[];
   refreshHabit: (habitId: number) => Promise<void>;
   /** "Not now" on an adaptive-difficulty suggestion — hides it for 7 days. */
@@ -219,9 +235,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           streak: currentStreak(logs, today),
           missStreak: missStreak(logs, today),
           isDueToday: q.isDueOn(h, today),
-          // Already-completed habits never render as locked — the lockout only
-          // blocks *marking* something done after the deadline (§4.3).
-          locked: !canLogToday(h.timeConstraint) && todayLog?.completed !== 1,
+          // Already-completed habits never render as "late" — this only
+          // flags an as-yet-unlogged habit whose window has closed. It no
+          // longer blocks marking something done (lib/timeConstraint.ts).
+          locked: isPastWindow(h.timeConstraint) && todayLog?.completed !== 1,
+          isAtRisk: isMomentumDeclining(logs, 3, today, h.pausedAt),
         };
       });
   }, [data.habits, data.logs, today]);
@@ -262,16 +280,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [refresh],
   );
 
+  const pauseHabit = useCallback(
+    async (habitId: number) => {
+      await q.pauseHabit(habitId);
+      await refresh();
+    },
+    [refresh],
+  );
+
+  const resumeHabit = useCallback(
+    async (habitId: number) => {
+      await q.resumeHabit(habitId);
+      await q.recomputeMomentum(habitId);
+      await refresh();
+    },
+    [refresh],
+  );
+
   /** user-flows.md §5 / §6 — the write path behind the optimistic toggle. */
   const setCompletion = useCallback(
     async (habitId: number, completed: boolean) => {
       try {
-        await q.upsertLog({ habitId, date: todayKey(), completed: completed ? 1 : 0 });
+        // Time-window compliance is informational, computed once at the
+        // moment of completion — it never feeds back into the momentum
+        // formula (GAIN/DECAY stay the exact constants data-model.md §4.1
+        // specifies), only into what the UI shows the user.
+        const habit = habits.find((h) => h.id === habitId);
+        const onTime = completed && habit ? isOnTime(habit.windowStart, habit.timeConstraint) : null;
+        const result = await q.upsertLog({
+          habitId,
+          date: todayKey(),
+          completed: completed ? 1 : 0,
+          onTime,
+        });
         await q.recomputeMomentum(habitId);
         await refresh();
+        let unlockedSomething = false;
         if (userId && completed) {
-          notifyAchievementUnlocks(await q.syncAchievements(userId));
+          const unlocked = await q.syncAchievements(userId);
+          unlockedSomething = unlocked.length > 0;
+          notifyAchievementUnlocks(unlocked);
         }
+        // Only habits with an actual time window get this — a flexible
+        // habit's quick-toggle stays silent, exactly as before. The
+        // celebration overlay takes priority when one fires; Toast.tsx
+        // replaces rather than queues, so this never spams.
+        if (!unlockedSomething && result.onTime !== null) {
+          showToast(result.onTime ? 'Logged — on time' : "Logged — a bit late, but it still counts");
+        }
+        return { onTime: result.onTime, completionTime: result.completionTime };
       } catch (err) {
         console.error('[Momentum] failed to save completion', err);
         showToast("Couldn't save that — tap to retry", 'Retry', () => {
@@ -280,19 +337,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await refresh();
       }
     },
-    [refresh, showToast, userId, notifyAchievementUnlocks],
+    [refresh, showToast, userId, notifyAchievementUnlocks, habits],
   );
 
   const saveLog = useCallback<AppValue['saveLog']>(
     async (habitId, draft, date) => {
       try {
-        await q.upsertLog({
+        const targetDate = date ?? todayKey();
+        const isBackfill = targetDate !== todayKey();
+        const habit = habits.find((h) => h.id === habitId);
+        // Backfilled entries get no on-time verdict — there's no real
+        // completion instant to judge against days after the fact.
+        const onTime =
+          draft.completed && !draft.skipped && !isBackfill && habit
+            ? isOnTime(habit.windowStart, habit.timeConstraint)
+            : null;
+        const result = await q.upsertLog({
           habitId,
-          date: date ?? todayKey(),
+          date: targetDate,
           completed: draft.completed ? 1 : 0,
           moodTag: draft.moodTag,
           contextTag: draft.contextTag,
           notes: draft.notes,
+          skipped: draft.skipped ?? false,
+          onTime,
         });
         await q.recomputeMomentum(habitId);
         await refresh();
@@ -304,7 +372,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         // The celebration overlay is the payoff when one fires — a toast
         // underneath it would be noise the user can't read anyway.
-        if (!unlockedSomething) showToast(draft.completed ? 'Entry saved' : 'Marked as skipped');
+        if (!unlockedSomething) {
+          const message = draft.skipped
+            ? 'Marked as skipped'
+            : draft.completed
+              ? result.onTime === null
+                ? 'Entry saved'
+                : result.onTime
+                  ? 'Entry saved — on time'
+                  : 'Entry saved — a bit late, but it still counts'
+              : 'Marked as missed';
+          showToast(message);
+        }
+        return { onTime: result.onTime, completionTime: result.completionTime };
       } catch (err) {
         console.error('[Momentum] failed to save log', err);
         showToast("Couldn't save your entry", 'Retry', () => {
@@ -312,7 +392,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
       }
     },
-    [refresh, showToast, userId, notifyAchievementUnlocks],
+    [refresh, showToast, userId, notifyAchievementUnlocks, habits],
   );
 
   const addHabit = useCallback<AppValue['addHabit']>(
@@ -380,6 +460,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     dismissCelebration,
     notifyAchievementUnlocks,
     dismissSuggestion,
+    pauseHabit,
+    resumeHabit,
     saveLog,
     addHabit,
     editHabit,

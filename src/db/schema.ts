@@ -30,13 +30,19 @@ export interface Habit {
   frequency: Frequency;
   difficultyLevel: DifficultyLevel;
   momentumScore: number;
+  /** Window END. Alone, it's the original single deadline; paired with
+   *  windowStart it becomes a true start/end window. Null = flexible. */
   timeConstraint: string | null;
+  /** Window START. Only meaningful alongside timeConstraint. */
+  windowStart: string | null;
   categoryTag: string | null;
   chartColor: ChartColor;
   createdAt: string;
   archivedAt: string | null;
   /** Set by "Not now" on the adaptive-difficulty suggestion — hidden until this date. */
   suggestionDismissedUntil: string | null;
+  /** Set while the habit is paused: momentum is frozen and nothing accrues. */
+  pausedAt: string | null;
 }
 
 export type ContextTag = 'home' | 'work' | 'gym' | 'other';
@@ -53,6 +59,12 @@ export interface HabitLog {
   contextTag: ContextTag | null;
   notes: string | null;
   loggedAt: string;
+  /** An intentional, user-chosen skip — unlike an ordinary miss, it doesn't
+   *  break a streak and is excluded from the consistency rate. */
+  skipped: boolean;
+  /** Landed inside the habit's time window when logged. Null when the habit
+   *  has no window, or the entry was backfilled for a past day. */
+  onTime: boolean | null;
 }
 
 export interface HabitChain {
@@ -119,11 +131,13 @@ export interface HabitRow {
   difficulty_level: number;
   momentum_score: number;
   time_constraint: string | null;
+  window_start: string | null;
   category_tag: string | null;
   chart_color: string;
   created_at: string;
   archived_at: string | null;
   suggestion_dismissed_until: string | null;
+  paused_at: string | null;
 }
 
 export interface HabitLogRow {
@@ -135,6 +149,8 @@ export interface HabitLogRow {
   context_tag: ContextTag | null;
   notes: string | null;
   logged_at: string;
+  skipped: boolean;
+  on_time: boolean | null;
 }
 
 export interface ChainRow {
@@ -169,11 +185,18 @@ export function toHabit(r: HabitRow): Habit {
     difficultyLevel: r.difficulty_level as DifficultyLevel,
     momentumScore: r.momentum_score,
     timeConstraint: r.time_constraint,
+    windowStart: r.window_start ?? null,
     categoryTag: r.category_tag,
     chartColor: r.chart_color as ChartColor,
     createdAt: r.created_at,
     archivedAt: r.archived_at,
     suggestionDismissedUntil: r.suggestion_dismissed_until ?? null,
+    // Normalized to a bare YYYY-MM-DD: the column is a timestamptz, but every
+    // comparison against it (isDueOn, replayMomentum, momentumSeries) is
+    // against a day-key string, and a full ISO timestamp would silently lose
+    // string-comparisons against its own pause day (a same-day prefix sorts
+    // as "less than" the longer timestamp).
+    pausedAt: r.paused_at ? r.paused_at.slice(0, 10) : null,
   };
 }
 
@@ -187,6 +210,8 @@ export function toHabitLog(r: HabitLogRow): HabitLog {
     contextTag: r.context_tag,
     notes: r.notes,
     loggedAt: r.logged_at,
+    skipped: Boolean(r.skipped),
+    onTime: r.on_time ?? null,
   };
 }
 

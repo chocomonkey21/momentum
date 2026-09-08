@@ -21,7 +21,7 @@ import {
   type PomodoroRow,
 } from './schema';
 import { replayMomentum } from '@/lib/momentum';
-import { todayKey, yesterdayKey, dayKeyRange, dayKeyToDate, toDayKey } from '@/lib/dates';
+import { todayKey, yesterdayKey, tomorrowKey, dayKeyRange, dayKeyToDate, toDayKey } from '@/lib/dates';
 import { CHART_COLORS, type ChartColor } from '@/theme/theme';
 import { currentStreak, totalCompletions } from '@/lib/streak';
 import { computeAchievements, type AchievementType } from '@/lib/achievements';
@@ -118,7 +118,14 @@ export async function updateUserName(userId: string, name: string) {
  * what `custom` customises. `daily` and `custom` are due every day; `weekly` is
  * due on the weekday the habit was created.
  */
-export function isDueOn(habit: Pick<Habit, 'frequency' | 'createdAt'>, dayKey: string): boolean {
+export function isDueOn(
+  habit: Pick<Habit, 'frequency' | 'createdAt'> & { pausedAt?: string | null },
+  dayKey: string,
+): boolean {
+  // A paused habit is never "due" — that's what stops the nightly backfill
+  // from writing new miss rows for it, which is what makes pausing actually
+  // freeze momentum instead of just hiding the penalty in the UI.
+  if (habit.pausedAt && dayKey >= habit.pausedAt) return false;
   const freq: Frequency = habit.frequency;
   if (freq === 'daily' || freq === 'custom') return true;
   return dayKeyToDate(dayKey).getDay() === new Date(habit.createdAt).getDay();
@@ -161,11 +168,14 @@ export async function createHabit(input: {
   frequency: Frequency;
   difficultyLevel: 1 | 2 | 3;
   timeConstraint?: string | null;
+  windowStart?: string | null;
   categoryTag?: string | null;
   createdAt?: string;
 }): Promise<number> {
   const name = validateHabitName(input.name);
   const timeConstraint = validateTimeConstraint(input.timeConstraint ?? null);
+  // A start time only means anything alongside an end time.
+  const windowStart = timeConstraint ? validateTimeConstraint(input.windowStart ?? null) : null;
   const chartColor = await nextChartColor(input.userId);
   const { data, error } = await supabase
     .from('habits')
@@ -176,6 +186,7 @@ export async function createHabit(input: {
       difficulty_level: input.difficultyLevel,
       momentum_score: 50, // new habits start at the midpoint
       time_constraint: timeConstraint,
+      window_start: windowStart,
       category_tag: input.categoryTag ?? null,
       chart_color: chartColor,
       created_at: input.createdAt ?? new Date().toISOString(),
@@ -190,7 +201,7 @@ export async function createHabit(input: {
 export async function updateHabit(
   habitId: number,
   patch: Partial<
-    Pick<Habit, 'name' | 'frequency' | 'difficultyLevel' | 'timeConstraint' | 'categoryTag'>
+    Pick<Habit, 'name' | 'frequency' | 'difficultyLevel' | 'timeConstraint' | 'windowStart' | 'categoryTag'>
   >,
 ) {
   const row: Record<string, unknown> = {};
@@ -198,9 +209,40 @@ export async function updateHabit(
   if (patch.frequency !== undefined) row.frequency = patch.frequency;
   if (patch.difficultyLevel !== undefined) row.difficulty_level = patch.difficultyLevel;
   if (patch.timeConstraint !== undefined) row.time_constraint = validateTimeConstraint(patch.timeConstraint);
+  if (patch.windowStart !== undefined) {
+    row.window_start = patch.timeConstraint === null && patch.windowStart
+      ? null // a start time with no end is meaningless; drop it rather than store an orphan
+      : validateTimeConstraint(patch.windowStart);
+  }
   if (patch.categoryTag !== undefined) row.category_tag = patch.categoryTag;
   const { error } = await supabase.from('habits').update(row).eq('id', habitId);
   fail('update habit', error);
+}
+
+/**
+ * Pausing freezes a habit exactly where it is: isDueOn() stops treating it as
+ * due from the pause date on, so the nightly backfill writes no new miss
+ * rows and replayMomentum() (given the same pausedAt) applies neither GAIN
+ * nor DECAY to any day from here on. Resuming just clears the marker —
+ * nothing is backfilled retroactively for the paused window.
+ */
+export async function pauseHabit(habitId: number) {
+  // "Freezes exactly where it is" means today's own action — including one
+  // just logged minutes ago — has to survive the freeze. replayMomentum and
+  // isDueOn both treat pausedAt as "the first day nothing counts", so the
+  // cutoff has to be TOMORROW: pausing with pausedAt = today would exclude
+  // today's own already-recorded log from the very next recompute (the
+  // nightly evaluateAllHabits() pass), silently reverting a real gain.
+  const { error } = await supabase
+    .from('habits')
+    .update({ paused_at: tomorrowKey() })
+    .eq('id', habitId);
+  fail('pause habit', error);
+}
+
+export async function resumeHabit(habitId: number) {
+  const { error } = await supabase.from('habits').update({ paused_at: null }).eq('id', habitId);
+  fail('resume habit', error);
 }
 
 /** data-model.md §6 — soft delete; history is never removed. */
@@ -278,6 +320,13 @@ export async function getAllLogs(habitIds: number[]): Promise<HabitLog[]> {
  * (habit_id, date), so this is a genuine upsert rather than the
  * read-then-write the Dexie version had to do by hand.
  */
+export interface LogResult {
+  habitId: number;
+  /** null when the habit has no time window, or the entry was backfilled. */
+  onTime: boolean | null;
+  completionTime: string;
+}
+
 export async function upsertLog(entry: {
   habitId: number;
   date: string;
@@ -285,7 +334,13 @@ export async function upsertLog(entry: {
   moodTag?: MoodTag | null;
   contextTag?: ContextTag | null;
   notes?: string | null;
-}): Promise<void> {
+  /** An intentional, user-chosen skip — see data-model discussion in schema.ts. */
+  skipped?: boolean;
+  /** Computed by the caller (it has the habit's window in memory already);
+   *  null for backfilled past-day entries, where there's no real completion
+   *  instant to judge on-time-ness against. */
+  onTime?: boolean | null;
+}): Promise<LogResult> {
   const notes = validateNotes(entry.notes ?? null);
   // Preserve any existing mood/context/notes when the quick toggle (which sends
   // none of them) re-writes a day that already had detail logged against it.
@@ -296,6 +351,8 @@ export async function upsertLog(entry: {
     .eq('date', entry.date)
     .maybeSingle();
 
+  const loggedAt = new Date().toISOString();
+  const onTime = entry.onTime ?? null;
   const { error } = await supabase.from('habit_logs').upsert(
     {
       habit_id: entry.habitId,
@@ -304,11 +361,14 @@ export async function upsertLog(entry: {
       mood_tag: entry.moodTag ?? existing?.mood_tag ?? null,
       context_tag: entry.contextTag ?? existing?.context_tag ?? null,
       notes: notes ?? existing?.notes ?? null,
-      logged_at: new Date().toISOString(),
+      logged_at: loggedAt,
+      skipped: entry.skipped ?? false,
+      on_time: onTime,
     },
     { onConflict: 'habit_id,date' },
   );
   fail('save log', error);
+  return { habitId: entry.habitId, onTime, completionTime: loggedAt };
 }
 
 export async function getTodayLog(habitId: number): Promise<HabitLog | undefined> {
@@ -359,8 +419,14 @@ export async function backfillMissedDays(habit: Habit): Promise<number> {
  * per user-flows.md §6.
  */
 export async function recomputeMomentum(habitId: number): Promise<number> {
+  const { data: habitRow } = await supabase
+    .from('habits')
+    .select('paused_at')
+    .eq('id', habitId)
+    .maybeSingle();
+  const pausedAt = (habitRow as { paused_at: string | null } | null)?.paused_at?.slice(0, 10) ?? null;
   const logs = await getLogsForHabit(habitId);
-  const score = replayMomentum(logs);
+  const score = replayMomentum(logs, todayKey(), pausedAt);
   const { error } = await supabase
     .from('habits')
     .update({ momentum_score: score })
@@ -378,7 +444,7 @@ export async function evaluateAllHabits(userId: string): Promise<void> {
     // Only rewrite momentum when the backfill actually changed something, or
     // when the cached score disagrees with a replay of the logs.
     const logs = await getLogsForHabit(h.id);
-    const replayed = replayMomentum(logs);
+    const replayed = replayMomentum(logs, todayKey(), h.pausedAt);
     if (filled > 0 || Math.round(replayed) !== Math.round(h.momentumScore)) {
       await supabase.from('habits').update({ momentum_score: replayed }).eq('id', h.id);
     }
