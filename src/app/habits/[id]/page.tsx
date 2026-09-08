@@ -10,11 +10,14 @@ import { MomentumRing } from '@/components/ui/MomentumRing';
 import { ErrorState, Skeleton } from '@/components/ui/States';
 import { ConfirmDialog, Sheet } from '@/components/ui/Sheet';
 import { MoodCalendar, StreakDotRow, MoodStatsFooter } from '@/components/chart/MoodCalendar';
-import { InsightCard, AdaptiveDifficultyBanner } from '@/components/habit/InsightCard';
+import { InsightCard } from '@/components/habit/InsightCard';
+import { AdaptiveSuggestionCard } from '@/components/habit/AdaptiveSuggestionCard';
 import { AddHabitSheet } from '@/components/habit/AddHabitSheet';
 import { LogHabitSheet } from '@/components/habit/LogHabitSheet';
 import { habitInsight, MIN_LOGS_FOR_INSIGHT } from '@/lib/insights';
-import { adaptiveDifficultySuggestion } from '@/lib/momentum';
+import { checkAdaptiveDifficulty } from '@/lib/momentum';
+import { todayKey } from '@/lib/dates';
+import type { DifficultyLevel } from '@/db/schema';
 import { MOOD_LABELS, MOOD_COLORS, chartHex, onChartHex, palette } from '@/theme/theme';
 import { formatHHmm } from '@/lib/dates';
 import { format } from 'date-fns';
@@ -37,14 +40,16 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const habitId = Number(id);
   const router = useRouter();
-  const { status, errorMessage, retry, habits, editHabit, removeHabit, chainNamesForHabit, saveLog } =
+  const { status, errorMessage, retry, habits, editHabit, removeHabit, chainNamesForHabit, saveLog, dismissSuggestion } =
     useApp();
 
   const [editOpen, setEditOpen] = useState(false);
+  // Set only when the edit sheet was opened via "Scale Down" — pre-fills a
+  // lower difficulty without ever writing it until the user confirms Save.
+  const [editPrefillLevel, setEditPrefillLevel] = useState<DifficultyLevel | null>(null);
   const [logOpen, setLogOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [dismissedSuggestion, setDismissedSuggestion] = useState(false);
 
   const habit = habits.find((h) => h.id === habitId);
 
@@ -53,9 +58,12 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
     [habit],
   );
 
-  const suggestion = habit
-    ? adaptiveDifficultySuggestion(habit.difficultyLevel, habit.missStreak)
-    : null;
+  // MomentumService.checkAdaptiveDifficulty — 3+ consecutive misses,
+  // suppressed while a "Not now" dismissal is still active.
+  const suggestion =
+    habit && !(habit.suggestionDismissedUntil && habit.suggestionDismissedUntil >= todayKey())
+      ? checkAdaptiveDifficulty(habit)
+      : null;
 
   const selectedLog = habit && selectedDay ? habit.logs.find((l) => l.date === selectedDay) : undefined;
 
@@ -108,7 +116,13 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
           title={habit.name}
           fallbackHref="/habits"
           action={
-            <IconButton label={`Edit ${habit.name}`} onClick={() => setEditOpen(true)}>
+            <IconButton
+              label={`Edit ${habit.name}`}
+              onClick={() => {
+                setEditPrefillLevel(null);
+                setEditOpen(true);
+              }}
+            >
               <Pencil size={20} aria-hidden />
             </IconButton>
           }
@@ -184,23 +198,17 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         </section>
 
-        {suggestion !== null && !dismissedSuggestion && (
+        {suggestion !== null && (
           <section className="mb-6">
-            <AdaptiveDifficultyBanner
+            <AdaptiveSuggestionCard
               habitName={habit.name}
               currentLevel={habit.difficultyLevel}
-              suggestedLevel={suggestion}
-              onDismiss={() => setDismissedSuggestion(true)}
-              onAccept={async () => {
-                await editHabit(habit.id, {
-                  name: habit.name,
-                  frequency: habit.frequency,
-                  difficultyLevel: suggestion,
-                  timeConstraint: habit.timeConstraint,
-                  categoryTag: habit.categoryTag,
-                });
-                setDismissedSuggestion(true);
+              suggestion={suggestion}
+              onScaleDown={() => {
+                setEditPrefillLevel(suggestion.suggestedLevel);
+                setEditOpen(true);
               }}
+              onNotNow={() => void dismissSuggestion(habit.id)}
             />
           </section>
         )}
@@ -309,15 +317,21 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
       <AddHabitSheet
         mode="edit"
         open={editOpen}
-        onOpenChange={setEditOpen}
+        onOpenChange={(o) => {
+          setEditOpen(o);
+          if (!o) setEditPrefillLevel(null);
+        }}
         initial={{
           name: habit.name,
           frequency: habit.frequency,
-          difficultyLevel: habit.difficultyLevel,
+          difficultyLevel: editPrefillLevel ?? habit.difficultyLevel,
           timeConstraint: habit.timeConstraint,
           categoryTag: habit.categoryTag,
         }}
-        onSubmit={(draft) => editHabit(habit.id, draft)}
+        onSubmit={async (draft) => {
+          await editHabit(habit.id, draft);
+          setEditPrefillLevel(null);
+        }}
       />
 
       <LogHabitSheet

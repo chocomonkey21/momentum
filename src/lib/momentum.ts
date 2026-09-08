@@ -124,6 +124,29 @@ export function momentumIsStrong(score: number): boolean {
   return score >= 70;
 }
 
+export interface AdaptiveDifficultySuggestion {
+  suggestedLevel: DifficultyLevel;
+  /** Consecutive missed days that triggered the suggestion. */
+  missStreakDays: number;
+}
+
+/**
+ * MomentumService.checkAdaptiveDifficulty — the named entry point from the
+ * class diagram. Counts consecutive missed days straight from HABIT_LOG
+ * (via missStreak(), already the canonical count) and proposes scaling the
+ * habit down one level, or returns null. It never writes anything; the
+ * caller decides what to do with the suggestion.
+ */
+export function checkAdaptiveDifficulty(habit: {
+  difficultyLevel: DifficultyLevel;
+  logs: Pick<HabitLog, 'date' | 'completed'>[];
+}): AdaptiveDifficultySuggestion | null {
+  const missStreakDays = missStreak(habit.logs);
+  const suggestedLevel = adaptiveDifficultySuggestion(habit.difficultyLevel, missStreakDays);
+  if (suggestedLevel === null) return null;
+  return { suggestedLevel, missStreakDays };
+}
+
 /** Momentum bands used for copy and warning affordances. */
 export function momentumBand(score: number): 'strong' | 'steady' | 'dipping' {
   if (score >= 70) return 'strong';

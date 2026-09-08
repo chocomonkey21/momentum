@@ -219,6 +219,19 @@ export async function unarchiveHabit(habitId: number) {
   fail('restore habit', error);
 }
 
+/**
+ * "Not now" on an adaptive-difficulty suggestion — persists across sessions,
+ * unlike the old banner's component-local dismissal state. `until` is a
+ * YYYY-MM-DD date; the suggestion stays hidden while todayKey() <= until.
+ */
+export async function dismissAdaptiveSuggestion(habitId: number, until: string) {
+  const { error } = await supabase
+    .from('habits')
+    .update({ suggestion_dismissed_until: until })
+    .eq('id', habitId);
+  fail('dismiss suggestion', error);
+}
+
 export async function chainsContainingHabit(habitId: number): Promise<string[]> {
   const { data, error } = await supabase
     .from('chain_habits')

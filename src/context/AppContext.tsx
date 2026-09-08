@@ -95,6 +95,8 @@ interface AppValue {
   removeHabit: (habitId: number) => Promise<void>;
   chainNamesForHabit: (habitId: number) => string[];
   refreshHabit: (habitId: number) => Promise<void>;
+  /** "Not now" on an adaptive-difficulty suggestion — hides it for 7 days. */
+  dismissSuggestion: (habitId: number) => Promise<void>;
 }
 
 const AppContext = createContext<AppValue | null>(null);
@@ -251,6 +253,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [refresh],
   );
 
+  const dismissSuggestion = useCallback(
+    async (habitId: number) => {
+      const until = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      await q.dismissAdaptiveSuggestion(habitId, until);
+      await refresh();
+    },
+    [refresh],
+  );
+
   /** user-flows.md §5 / §6 — the write path behind the optimistic toggle. */
   const setCompletion = useCallback(
     async (habitId: number, completed: boolean) => {
@@ -368,6 +379,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     celebration,
     dismissCelebration,
     notifyAchievementUnlocks,
+    dismissSuggestion,
     saveLog,
     addHabit,
     editHabit,

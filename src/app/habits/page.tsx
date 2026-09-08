@@ -10,10 +10,13 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { EmptyState, ErrorState, SkeletonCardList } from '@/components/ui/States';
 import { HabitCard } from '@/components/habit/HabitCard';
 import { AddHabitSheet } from '@/components/habit/AddHabitSheet';
+import { AdaptiveSuggestionCard } from '@/components/habit/AdaptiveSuggestionCard';
 import { ChainsPanel } from '@/components/habit/ChainsPanel';
 import { ConfirmDialog } from '@/components/ui/Sheet';
 import { completionRate } from '@/lib/streak';
-import { dayKeyRange, toDayKey } from '@/lib/dates';
+import { dayKeyRange, toDayKey, todayKey } from '@/lib/dates';
+import { checkAdaptiveDifficulty } from '@/lib/momentum';
+import type { DifficultyLevel } from '@/db/schema';
 
 type View = 'habits' | 'chains';
 type Range = 'today' | 'week' | 'year';
@@ -50,7 +53,8 @@ export default function HabitsPage() {
 function HabitsScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { status, errorMessage, retry, habits, setCompletion, addHabit, removeHabit } = useApp();
+  const { status, errorMessage, retry, habits, setCompletion, addHabit, editHabit, removeHabit, dismissSuggestion } =
+    useApp();
 
   const [view, setView] = useState<View>(
     searchParams.get('view') === 'chains' ? 'chains' : 'habits',
@@ -59,6 +63,12 @@ function HabitsScreen() {
   const [addOpen, setAddOpen] = useState(false);
   const [newChainSignal, setNewChainSignal] = useState(0);
   const [pendingDelete, setPendingDelete] = useState<HabitView | null>(null);
+  // Scale Down opens the normal edit form pre-filled with the suggested
+  // level — it never writes to the habit on its own.
+  const [scalingDown, setScalingDown] = useState<{ habit: HabitView; level: DifficultyLevel } | null>(
+    null,
+  );
+  const today = todayKey();
 
   const windowKeys = useMemo(() => {
     if (range === 'today') return null;
@@ -142,8 +152,14 @@ function HabitsScreen() {
               <ul className="flex flex-col gap-3">
                 {habits.map((habit) => {
                   const stat = statFor(habit);
+                  // MomentumService.checkAdaptiveDifficulty — 3+ consecutive
+                  // misses, suppressed while a "Not now" dismissal is active.
+                  const suggestion =
+                    habit.suggestionDismissedUntil && habit.suggestionDismissedUntil >= today
+                      ? null
+                      : checkAdaptiveDifficulty(habit);
                   return (
-                    <li key={habit.id}>
+                    <li key={habit.id} className="flex flex-col gap-2">
                       <HabitCard
                         habit={habit}
                         onToggle={setCompletion}
@@ -155,6 +171,15 @@ function HabitsScreen() {
                         showGrid={range === 'year'}
                         gridWeeks={52}
                       />
+                      {suggestion && (
+                        <AdaptiveSuggestionCard
+                          habitName={habit.name}
+                          currentLevel={habit.difficultyLevel}
+                          suggestion={suggestion}
+                          onScaleDown={() => setScalingDown({ habit, level: suggestion.suggestedLevel })}
+                          onNotNow={() => void dismissSuggestion(habit.id)}
+                        />
+                      )}
                     </li>
                   );
                 })}
@@ -165,6 +190,28 @@ function HabitsScreen() {
       </PageFade>
 
       <AddHabitSheet open={addOpen} onOpenChange={setAddOpen} onSubmit={addHabit} />
+
+      {/* Scale Down's destination: the ordinary edit sheet, with the
+          suggested (lower) difficulty pre-filled rather than already saved. */}
+      <AddHabitSheet
+        mode="edit"
+        open={scalingDown !== null}
+        onOpenChange={(o) => !o && setScalingDown(null)}
+        initial={
+          scalingDown
+            ? {
+                name: scalingDown.habit.name,
+                frequency: scalingDown.habit.frequency,
+                difficultyLevel: scalingDown.level,
+                timeConstraint: scalingDown.habit.timeConstraint,
+                categoryTag: scalingDown.habit.categoryTag,
+              }
+            : undefined
+        }
+        onSubmit={async (draft) => {
+          if (scalingDown) await editHabit(scalingDown.habit.id, draft);
+        }}
+      />
 
       <ConfirmDialog
         open={pendingDelete !== null}

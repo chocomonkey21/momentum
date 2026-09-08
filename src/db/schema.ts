@@ -35,6 +35,8 @@ export interface Habit {
   chartColor: ChartColor;
   createdAt: string;
   archivedAt: string | null;
+  /** Set by "Not now" on the adaptive-difficulty suggestion — hidden until this date. */
+  suggestionDismissedUntil: string | null;
 }
 
 export type ContextTag = 'home' | 'work' | 'gym' | 'other';
@@ -121,6 +123,7 @@ export interface HabitRow {
   chart_color: string;
   created_at: string;
   archived_at: string | null;
+  suggestion_dismissed_until: string | null;
 }
 
 export interface HabitLogRow {
@@ -170,6 +173,7 @@ export function toHabit(r: HabitRow): Habit {
     chartColor: r.chart_color as ChartColor,
     createdAt: r.created_at,
     archivedAt: r.archived_at,
+    suggestionDismissedUntil: r.suggestion_dismissed_until ?? null,
   };
 }
 

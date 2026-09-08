@@ -6,12 +6,13 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
 import { Button, IconButton } from '@/components/ui/Button';
 import { EmptyState, Skeleton } from '@/components/ui/States';
+import { Sheet } from '@/components/ui/Sheet';
 import { ChainBuilder } from '@/components/habit/ChainBuilder';
 import { deleteChain, createChain, saveChainMembers, renameChain } from '@/db/queries';
 import { cn } from '@/lib/cn';
 import { spring } from '@/theme/theme';
 import { chartHex, onChartHex, semantic, palette } from '@/theme/theme';
-import { todayKey } from '@/lib/dates';
+import { todayKey, formatHHmm } from '@/lib/dates';
 
 /**
  * Chains, extracted from the old standalone /chains screen so it can live as a
@@ -28,11 +29,16 @@ export function ChainsPanel({
   openBuilderSignal?: number;
   onBuilderHandled?: () => void;
 }) {
-  const { status, habits, chains, chainMembers, userId, showToast } = useApp();
+  const { status, habits, chains, chainMembers, userId, showToast, setCompletion } = useApp();
   const reduce = useReducedMotion();
 
   const [builderFor, setBuilderFor] = useState<number | 'new' | null>(null);
   const [lastSignal, setLastSignal] = useState(openBuilderSignal ?? 0);
+  // "Log Chain" — one button on the chain itself, rather than opening each
+  // member habit individually. logChainFor holds the chain id while its
+  // confirm summary is open; nothing is written until Log Chain is tapped.
+  const [logChainFor, setLogChainFor] = useState<number | null>(null);
+  const [logging, setLogging] = useState(false);
 
   // Host screen asked us to open the builder.
   if (openBuilderSignal !== undefined && openBuilderSignal !== lastSignal) {
@@ -63,6 +69,36 @@ export function ChainsPanel({
   }, [chains, chainMembers, habits, today]);
 
   const editing = builderFor === 'new' ? null : chainViews.find((c) => c.chain.id === builderFor);
+
+  const logChainView = useMemo(() => {
+    const cv = logChainFor === null ? undefined : chainViews.find((c) => c.chain.id === logChainFor);
+    if (!cv) return null;
+    const rows = cv.members.map((habit) => {
+      const done = habit.todayLog?.completed === 1;
+      // Locked = a deadline today has already passed (CompletionToggle uses
+      // the same signal to grey out the tap target on the card).
+      const tooLate = !done && habit.locked;
+      return { habit, done, tooLate, willLog: !done && !tooLate };
+    });
+    return { chain: cv.chain, rows, willLogCount: rows.filter((r) => r.willLog).length };
+  }, [logChainFor, chainViews]);
+
+  async function confirmLogChain() {
+    if (!logChainView) return;
+    setLogging(true);
+    try {
+      // Same path as ticking each habit by hand — setCompletion writes the
+      // log and recomputes momentum for that one habit, so a chain of three
+      // updates three momentum scores independently, not as a group.
+      await Promise.all(
+        logChainView.rows.filter((r) => r.willLog).map((r) => setCompletion(r.habit.id, true)),
+      );
+      showToast(`${logChainView.chain.chainName} logged`);
+      setLogChainFor(null);
+    } finally {
+      setLogging(false);
+    }
+  }
 
   function closeBuilder() {
     setBuilderFor(null);
@@ -159,6 +195,16 @@ export function ChainsPanel({
                     </div>
                   </div>
 
+                  {total > 0 && !complete && (
+                    <Button
+                      fullWidth
+                      className="mb-4 bg-white text-black hover:bg-white"
+                      onClick={() => setLogChainFor(chain.id ?? null)}
+                    >
+                      Log Chain
+                    </Button>
+                  )}
+
                   {/* Member sequence, left-to-right with arrows. */}
                   <ol className="flex flex-wrap items-center gap-2">
                     {members.map((habit, i) => {
@@ -211,6 +257,59 @@ export function ChainsPanel({
           </div>
         </>
       )}
+
+      {/* Log Chain confirmation — what will count as done, what's already
+          ticked, and what missed its deadline, before anything is saved. */}
+      <Sheet
+        open={logChainView !== null}
+        onOpenChange={(o) => !o && setLogChainFor(null)}
+        title={`Log "${logChainView?.chain.chainName ?? ''}"?`}
+        description={`${logChainView?.willLogCount ?? 0} habit${
+          logChainView?.willLogCount === 1 ? '' : 's'
+        } will be logged now.`}
+      >
+        {logChainView && (
+          <div className="flex flex-col gap-4">
+            <ul className="flex flex-col gap-2">
+              {logChainView.rows.map(({ habit, done, tooLate }) => (
+                <li
+                  key={habit.id}
+                  className="flex items-center justify-between gap-3 rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3"
+                >
+                  <span className="font-display min-w-0 truncate text-[16px]">{habit.name}</span>
+                  <span
+                    className="font-data shrink-0 rounded-[var(--radius-pill)] px-3 py-1.5"
+                    style={
+                      done
+                        ? { backgroundColor: semantic.positive, color: palette.ink0 }
+                        : tooLate
+                          ? { backgroundColor: semantic.warning, color: palette.ink0 }
+                          : { border: `2px solid ${palette.ink5}`, color: palette.white }
+                    }
+                  >
+                    {done
+                      ? 'Done'
+                      : tooLate
+                        ? `Missed${habit.timeConstraint ? ` · was due ${formatHHmm(habit.timeConstraint)}` : ''}`
+                        : 'Will log'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-footnote text-label-secondary">
+              Momentum updates for each habit separately.
+            </p>
+            <Button
+              fullWidth
+              loading={logging}
+              disabled={logChainView.willLogCount === 0}
+              onClick={confirmLogChain}
+            >
+              Log Chain
+            </Button>
+          </div>
+        )}
+      </Sheet>
 
       <ChainBuilder
         open={builderFor !== null}
