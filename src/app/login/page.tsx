@@ -29,6 +29,7 @@ export default function LoginPage() {
 
   const [mode, setMode] = useState<Mode>('signIn');
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +68,12 @@ export default function LoginPage() {
         router.replace('/');
       } else {
         signingUp.current = true;
-        const { needsConfirmation } = await signUp(email, password, name || email.split('@')[0]);
+        const { needsConfirmation } = await signUp(
+          email,
+          password,
+          name || email.split('@')[0],
+          username || name || email.split('@')[0],
+        );
         if (needsConfirmation) {
           // "Confirm email" is still on in Supabase Auth settings. Say so
           // plainly instead of leaving the user on a dead screen.
@@ -155,6 +161,21 @@ export default function LoginPage() {
                 autoComplete="name"
                 className={fieldClass}
               />
+              <label htmlFor="username" className="font-data mb-2 mt-4 block text-label-tertiary">
+                Username
+              </label>
+              <input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="shreyas212121"
+                maxLength={30}
+                autoComplete="username"
+                className={fieldClass}
+              />
+              <p className="mt-2 text-footnote text-label-secondary">
+                Use letters, numbers, underscores, or #. It must include at least one letter.
+              </p>
             </motion.div>
           )}
         </AnimatePresence>

@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { getEmailValidationError } from '@/lib/email';
+import { validateUsername } from '@/lib/validation';
 
 /**
  * Session state.
@@ -27,7 +28,7 @@ interface AuthValue {
   userId: string | null;
   email: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<{ needsConfirmation: boolean }>;
+  signUp: (email: string, password: string, name: string, username: string) => Promise<{ needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
 }
 
@@ -68,14 +69,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw new Error(humanAuthError(error.message));
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string, name: string) => {
+  const signUp = useCallback(async (email: string, password: string, name: string, username: string) => {
     const emailError = getEmailValidationError(email);
     if (emailError) throw new Error(emailError);
+    const validUsername = validateUsername(username);
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      // Read by the on_auth_user_created trigger to name the profile row.
-      options: { data: { name: name.trim() } },
+      // Read by the on_auth_user_created trigger to create the profile handle.
+      options: { data: { name: name.trim(), username: validUsername } },
     });
     if (error) throw new Error(humanAuthError(error.message));
     // With "Confirm email" off, signUp returns a live session and the user is
@@ -110,6 +112,9 @@ export function useAuth(): AuthValue {
 /** Supabase's raw messages are terse and sometimes cryptic; never show them raw. */
 function humanAuthError(message: string): string {
   const m = message.toLowerCase();
+  if (m.includes('users_username_key') || m.includes('users_username_lower_unique')) {
+    return 'That username is already taken. Choose another one.';
+  }
   if (m.includes('invalid login credentials')) return 'That email and password don’t match.';
   if (m.includes('already registered') || m.includes('already been registered'))
     return 'There’s already an account with that email — try signing in.';

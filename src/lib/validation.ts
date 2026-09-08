@@ -6,7 +6,7 @@ export const usernameSchema = z
   .trim()
   .min(3, 'Username must be at least 3 characters.')
   .max(30, 'Username must be 30 characters or fewer.')
-  .regex(/^[A-Za-z0-9_]+$/, 'Username can only use letters, numbers, and underscores.')
+  .regex(/^[A-Za-z0-9_#]+$/, 'Username can only use letters, numbers, underscores, and #.')
   .regex(/[A-Za-z]/, 'Username cannot contain only numbers. Add at least one letter.');
 
 export const displayNameSchema = z
