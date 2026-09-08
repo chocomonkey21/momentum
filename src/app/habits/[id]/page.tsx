@@ -2,7 +2,7 @@
 
 import { use, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Flame, Pencil, NotebookPen } from 'lucide-react';
+import { Flame, Pencil, NotebookPen, Timer } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Screen, PushedHeader, PageFade } from '@/components/ui/Screen';
 import { Button, IconButton } from '@/components/ui/Button';
@@ -161,15 +161,27 @@ export default function HabitDetailPage({ params }: { params: Promise<{ id: stri
               ))}
           </div>
 
-          <Button
-            onClick={() => setLogOpen(true)}
-            fullWidth
-            className="mt-6"
-            style={{ backgroundColor: heroFg, color: heroBg }}
-          >
-            <NotebookPen size={18} aria-hidden />
-            Log today
-          </Button>
+          <div className="mt-6 flex gap-3">
+            <Button
+              onClick={() => setLogOpen(true)}
+              fullWidth
+              style={{ backgroundColor: heroFg, color: heroBg }}
+            >
+              <NotebookPen size={18} aria-hidden />
+              Log today
+            </Button>
+            {/* This habit's own focus mode — Pomodoro pre-linked, so timing
+                and logging one habit never means hunting through the picker
+                on the shared Focus screen. */}
+            <IconButton
+              label={`Start a focus session for ${habit.name}`}
+              onClick={() => router.push(`/focus?habit=${habit.id}`)}
+              className="border-2"
+              style={{ borderColor: 'rgba(0,0,0,0.2)', color: heroFg }}
+            >
+              <Timer size={20} aria-hidden />
+            </IconButton>
+          </div>
         </section>
 
         {suggestion !== null && !dismissedSuggestion && (

@@ -650,11 +650,12 @@ export async function getFriends(userId: string): Promise<FriendRow[]> {
 /**
  * Send a friend request by username.
  *
- * RLS only lets a user read their OWN profile row, so a client-side lookup of
- * someone else's username returns nothing by design. Resolving a handle to an
- * account therefore needs a security-definer RPC or a relaxed public-profile
- * policy — neither is in place yet, so this reports the limitation honestly
- * rather than silently failing.
+ * Resolves the handle through find_user_by_username() (migration 0007) — a
+ * narrow SECURITY DEFINER RPC that returns id + name for an exact match and
+ * nothing else, since RLS otherwise hides every profile row but the caller's
+ * own. Every branch below is checked against real backend state (a real
+ * account, not the caller, not already connected) before a request is ever
+ * inserted — a request can only reach an actual, existing user.
  */
 export async function requestFriendByUsername(
   userId: string,
@@ -666,26 +667,44 @@ export async function requestFriendByUsername(
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : 'Enter a valid username.' };
   }
-  const { data, error } = await supabase
-    .from('users')
-    .select('id')
-    .eq('username', validUsername)
-    .maybeSingle();
+
+  const { data, error } = await supabase.rpc('find_user_by_username', {
+    p_username: validUsername,
+  });
   if (error) return { ok: false, message: 'Could not look up that username.' };
-  if (!data) {
+  const match = ((data ?? []) as { id: string; name: string }[])[0];
+  if (!match) {
+    return { ok: false, message: `No account found with the username "${validUsername}".` };
+  }
+  if (match.id === userId) return { ok: false, message: "That's your own username." };
+
+  const { data: existing, error: existingErr } = await supabase
+    .from('friendships')
+    .select('status, user_id')
+    .or(
+      `and(user_id.eq.${userId},friend_user_id.eq.${match.id}),and(user_id.eq.${match.id},friend_user_id.eq.${userId})`,
+    )
+    .maybeSingle();
+  fail('check existing friendship', existingErr);
+  if (existing) {
+    const row = existing as { status: 'pending' | 'accepted'; user_id: string };
+    if (row.status === 'accepted') {
+      return { ok: false, message: `You and ${match.name} are already friends.` };
+    }
     return {
       ok: false,
-      message: 'No account found with that username. Public profile lookup needs a Phase 2 policy.',
+      message:
+        row.user_id === userId
+          ? `You've already sent ${match.name} a request.`
+          : `${match.name} already sent you a request — check Pending.`,
     };
   }
-  const friendUserId = (data as { id: string }).id;
-  if (friendUserId === userId) return { ok: false, message: "That's you." };
 
   const { error: insErr } = await supabase
     .from('friendships')
-    .insert({ user_id: userId, friend_user_id: friendUserId, status: 'pending' });
+    .insert({ user_id: userId, friend_user_id: match.id, status: 'pending' });
   if (insErr) return { ok: false, message: 'Could not send that request.' };
-  return { ok: true, message: `Request sent to ${validUsername}` };
+  return { ok: true, message: `Request sent to ${match.name} (@${validUsername}).` };
 }
 
 export interface ChallengeBoard {

@@ -17,6 +17,7 @@ import { todayKey } from '@/lib/dates';
 import { currentStreak } from '@/lib/streak';
 import { missStreak } from '@/lib/momentum';
 import { canLogToday } from '@/lib/timeConstraint';
+import { ACHIEVEMENT_DEFINITIONS, type AchievementDefinition, type AchievementType } from '@/lib/achievements';
 
 /**
  * App data.
@@ -71,6 +72,14 @@ interface AppValue {
   dismissToast: () => void;
   refresh: () => Promise<void>;
   setCompletion: (habitId: number, completed: boolean) => Promise<void>;
+  /** Set once, app-wide, whenever an achievement threshold is newly crossed —
+   *  drives the celebration overlay mounted in AuthGate. */
+  celebration: AchievementDefinition | null;
+  dismissCelebration: () => void;
+  /** Looks up the first newly-unlocked type from syncAchievements() and fires
+   *  the celebration for it. Exposed so Focus (Pomodoro completions aren't
+   *  routed through setCompletion/saveLog) can trigger the same payoff. */
+  notifyAchievementUnlocks: (unlocked: AchievementType[]) => void;
   saveLog: (
     habitId: number,
     draft: {
@@ -226,6 +235,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(t);
   }, [toast]);
 
+  const [celebration, setCelebration] = useState<AchievementDefinition | null>(null);
+  const dismissCelebration = useCallback(() => setCelebration(null), []);
+  const notifyAchievementUnlocks = useCallback((unlocked: AchievementType[]) => {
+    if (unlocked.length === 0) return;
+    const def = ACHIEVEMENT_DEFINITIONS.find((d) => d.id === unlocked[0]);
+    if (def) setCelebration(def);
+  }, []);
+
   const refreshHabit = useCallback(
     async (habitId: number) => {
       await q.recomputeMomentum(habitId);
@@ -241,9 +258,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await q.upsertLog({ habitId, date: todayKey(), completed: completed ? 1 : 0 });
         await q.recomputeMomentum(habitId);
         await refresh();
-        if (userId) {
-          const unlocked = await q.syncAchievements(userId);
-          if (unlocked.length > 0) showToast(`Achievement unlocked: ${unlocked[0].toUpperCase()}`);
+        if (userId && completed) {
+          notifyAchievementUnlocks(await q.syncAchievements(userId));
         }
       } catch (err) {
         console.error('[Momentum] failed to save completion', err);
@@ -253,7 +269,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await refresh();
       }
     },
-    [refresh, showToast, userId],
+    [refresh, showToast, userId, notifyAchievementUnlocks],
   );
 
   const saveLog = useCallback<AppValue['saveLog']>(
@@ -269,11 +285,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
         await q.recomputeMomentum(habitId);
         await refresh();
+        let unlockedSomething = false;
         if (userId && draft.completed) {
           const unlocked = await q.syncAchievements(userId);
-          if (unlocked.length > 0) showToast(`Achievement unlocked: ${unlocked[0].toUpperCase()}`);
+          unlockedSomething = unlocked.length > 0;
+          notifyAchievementUnlocks(unlocked);
         }
-        showToast(draft.completed ? 'Entry saved' : 'Marked as skipped');
+        // The celebration overlay is the payoff when one fires — a toast
+        // underneath it would be noise the user can't read anyway.
+        if (!unlockedSomething) showToast(draft.completed ? 'Entry saved' : 'Marked as skipped');
       } catch (err) {
         console.error('[Momentum] failed to save log', err);
         showToast("Couldn't save your entry", 'Retry', () => {
@@ -281,7 +301,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
       }
     },
-    [refresh, showToast, userId],
+    [refresh, showToast, userId, notifyAchievementUnlocks],
   );
 
   const addHabit = useCallback<AppValue['addHabit']>(
@@ -345,6 +365,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     dismissToast,
     refresh,
     setCompletion,
+    celebration,
+    dismissCelebration,
+    notifyAchievementUnlocks,
     saveLog,
     addHabit,
     editHabit,

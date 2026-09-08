@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Play, Pause, RotateCcw, Link2, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { useApp } from '@/context/AppContext';
@@ -9,23 +10,40 @@ import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { Sheet } from '@/components/ui/Sheet';
 import { MomentumRing } from '@/components/ui/MomentumRing';
+import { SkeletonCardList } from '@/components/ui/States';
 import { savePomodoroSession, getPomodoroSessions, syncAchievements } from '@/db/queries';
 import type { PomodoroSession } from '@/db/schema';
 import { semantic, chartHex, palette } from '@/theme/theme';
 import { cn } from '@/lib/cn';
 
 const PRESETS = [25, 50, 90];
+const MIN_CUSTOM_MINUTES = 25;
 
 /**
  * Focus / Pomodoro (ui-spec.md §10).
  *
  * The linked habit is correlation only: per data-model.md §7 a completed
- * session does NOT create or update a HabitLog. The user still logs the habit
- * through the normal Log Habit flow — the link exists so the app can say
- * "3 focus sessions against Read this week", not to silently complete a habit.
+ * session does NOT create or update a HabitLog on its own. Finishing a
+ * session linked to a habit instead offers a one-tap "Log it" action via the
+ * toast — the user still decides, the session never silently completes
+ * anything.
+ *
+ * Reading `?habit=<id>` pre-links a habit when this screen is opened from
+ * that habit's own Detail page (its "focus mode" entry point), so timing and
+ * logging one specific habit never means hunting it out of the picker.
  */
 export default function FocusPage() {
-  const { habits, userId, showToast } = useApp();
+  return (
+    // useSearchParams needs a Suspense boundary in the App Router.
+    <Suspense fallback={<Screen><SkeletonCardList rows={2} /></Screen>}>
+      <FocusScreen />
+    </Suspense>
+  );
+}
+
+function FocusScreen() {
+  const { habits, userId, showToast, setCompletion, notifyAchievementUnlocks } = useApp();
+  const searchParams = useSearchParams();
 
   const [durationMinutes, setDuration] = useState(25);
   const [remaining, setRemaining] = useState(25 * 60);
@@ -34,6 +52,22 @@ export default function FocusPage() {
   const [linkedHabitId, setLinkedHabitId] = useState<number | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [justCompleted, setJustCompleted] = useState(false);
+  const [customMode, setCustomMode] = useState(false);
+  const [customInput, setCustomInput] = useState(String(MIN_CUSTOM_MINUTES));
+
+  // Pre-link the habit this screen was opened for (Habit Detail's "focus
+  // mode" button), once, without overriding a link the user later changes.
+  const appliedFromQuery = useRef(false);
+  useEffect(() => {
+    if (appliedFromQuery.current) return;
+    const raw = searchParams.get('habit');
+    if (!raw) return;
+    const id = Number(raw);
+    if (Number.isFinite(id) && habits.some((h) => h.id === id)) {
+      setLinkedHabitId(id);
+      appliedFromQuery.current = true;
+    }
+  }, [searchParams, habits]);
 
   const [sessions, setSessions] = useState<PomodoroSession[]>([]);
   const reloadSessions = useCallback(async () => {
@@ -69,12 +103,31 @@ export default function FocusPage() {
       setRemaining(durationMinutes * 60);
       if (completed === 1) {
         setJustCompleted(true);
-        const unlocked = userId ? await syncAchievements(userId) : [];
-        showToast(unlocked.length > 0 ? `Achievement unlocked: ${unlocked[0].toUpperCase()}` : 'Focus session complete');
+        if (userId) notifyAchievementUnlocks(await syncAchievements(userId));
+
+        // Timing a habit's own focus session ends with a one-tap way to log
+        // it — the "time their habits and log them" loop, without the timer
+        // ever completing the habit on its own.
+        const habit = linkedHabitId ? habits.find((h) => h.id === linkedHabitId) : null;
+        showToast(
+          habit ? `Focus session complete — log ${habit.name}?` : 'Focus session complete',
+          habit ? 'Log it' : undefined,
+          habit ? () => void setCompletion(habit.id, true) : undefined,
+        );
         setTimeout(() => setJustCompleted(false), 2500);
       }
     },
-    [userId, startedAt, linkedHabitId, durationMinutes, showToast, reloadSessions],
+    [
+      userId,
+      startedAt,
+      linkedHabitId,
+      durationMinutes,
+      showToast,
+      reloadSessions,
+      habits,
+      setCompletion,
+      notifyAchievementUnlocks,
+    ],
   );
 
   // Tick. Uses a wall-clock deadline rather than accumulating setInterval drift.
@@ -111,6 +164,13 @@ export default function FocusPage() {
       setRunning(false);
       setRemaining(durationMinutes * 60);
     }
+  }
+
+  function applyCustomMinutes(raw: string) {
+    const parsed = Math.max(MIN_CUSTOM_MINUTES, Math.round(Number(raw) || MIN_CUSTOM_MINUTES));
+    setCustomInput(String(parsed));
+    setDuration(parsed);
+    setRemaining(parsed * 60);
   }
 
   const mins = Math.floor(remaining / 60);
@@ -221,11 +281,12 @@ export default function FocusPage() {
               {PRESETS.map((p) => (
                 <Chip
                   key={p}
-                  selected={durationMinutes === p}
+                  selected={!customMode && durationMinutes === p}
                   // Presets are disabled while a session is running — Reset
                   // first to change duration (ui-spec.md §10).
                   disabled={!idle}
                   onSelect={() => {
+                    setCustomMode(false);
                     setDuration(p);
                     setRemaining(p * 60);
                   }}
@@ -234,7 +295,43 @@ export default function FocusPage() {
                   {p} min
                 </Chip>
               ))}
+              <Chip
+                selected={customMode}
+                disabled={!idle}
+                onSelect={() => {
+                  setCustomMode(true);
+                  applyCustomMinutes(customInput);
+                }}
+                className="flex-1"
+              >
+                Custom
+              </Chip>
             </div>
+
+            {customMode && (
+              <div className="mt-3 flex items-center gap-3">
+                <input
+                  type="number"
+                  min={MIN_CUSTOM_MINUTES}
+                  step={5}
+                  inputMode="numeric"
+                  value={customInput}
+                  disabled={!idle}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  onBlur={(e) => applyCustomMinutes(e.target.value)}
+                  aria-label="Custom duration in minutes"
+                  className={cn(
+                    'w-24 rounded-[var(--radius-block)] bg-bg-tertiary px-4 py-3',
+                    'font-display text-[18px] text-label-primary [color-scheme:dark]',
+                    'border-2 border-transparent transition-colors focus:border-tint',
+                    'disabled:cursor-not-allowed disabled:opacity-40',
+                  )}
+                />
+                <span className="font-data text-label-tertiary">
+                  minutes · {MIN_CUSTOM_MINUTES} min minimum
+                </span>
+              </div>
+            )}
           </fieldset>
 
           {/* Optional habit link — lowest emphasis, and settable only before
@@ -264,8 +361,8 @@ export default function FocusPage() {
 
           {linkedHabit && (
             <p className="text-footnote leading-relaxed text-label-secondary">
-              Linking records the session against {linkedHabit.name}. It doesn&rsquo;t mark the
-              habit complete — log that separately.
+              Linking records the session against {linkedHabit.name}. Finishing the timer offers a
+              one-tap way to log it — it doesn&rsquo;t mark the habit complete on its own.
             </p>
           )}
         </section>

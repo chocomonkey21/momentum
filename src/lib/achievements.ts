@@ -8,6 +8,9 @@ export type AchievementType =
   | 'committed'
   | 'first-focus';
 
+/** Flat reward per achievement — the whole "points" model is this one number. */
+export const POINTS_PER_ACHIEVEMENT = 100;
+
 export interface AchievementDefinition {
   id: AchievementType;
   name: string;

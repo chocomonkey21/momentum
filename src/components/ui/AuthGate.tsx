@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { BottomTabBar } from './Nav';
 import { ToastHost } from './Toast';
+import { AchievementCelebration } from './AchievementCelebration';
 
 /** Routes reachable without a session. */
 const PUBLIC_ROUTES = ['/login'];
@@ -46,6 +47,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       {children}
       {status === 'signedIn' && !isPublic && !isOnboarding && <BottomTabBar />}
       <ToastHost />
+      <AchievementCelebration />
     </>
   );
 }

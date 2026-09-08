@@ -8,7 +8,13 @@ import { useApp } from '@/context/AppContext';
 import { Screen, ScreenHeader, PageFade } from '@/components/ui/Screen';
 import { Sheet } from '@/components/ui/Sheet';
 import { ErrorState, Skeleton } from '@/components/ui/States';
-import { computeAchievements, bestStreakEver, type Achievement, type AchievementType } from '@/lib/achievements';
+import {
+  computeAchievements,
+  bestStreakEver,
+  POINTS_PER_ACHIEVEMENT,
+  type Achievement,
+  type AchievementType,
+} from '@/lib/achievements';
 import { totalCompletions, completionRate } from '@/lib/streak';
 import { getPomodoroSessions, getUserAchievementState, syncAchievements } from '@/db/queries';
 import type { PomodoroSession } from '@/db/schema';
@@ -117,7 +123,7 @@ export default function ProfilePage() {
           <div className="mb-3 flex items-baseline justify-between">
             <h2 className="font-display text-title2">Achievements</h2>
             <span className="font-data text-label-tertiary">
-              {unlockedCount} of {achievements.length}
+              {unlockedCount} of {achievements.length} · {unlockedCount * POINTS_PER_ACHIEVEMENT} pts
             </span>
           </div>
 
@@ -193,6 +199,9 @@ export default function ProfilePage() {
         </section>
       </PageFade>
 
+      {/* Achievement detail: requirement, current progress, the reward, and
+          the exact unlock condition — turning each badge from something you
+          look at into something you tap, understand, and work toward. */}
       <Sheet
         open={detail !== null}
         onOpenChange={(o) => !o && setDetail(null)}
@@ -200,8 +209,25 @@ export default function ProfilePage() {
         description={detail?.unlocked ? 'Unlocked' : 'Locked'}
       >
         {detail && (
-          <div className="flex flex-col gap-4">
-            <p className="text-body">{detail.description}</p>
+          <div className="flex flex-col gap-5">
+            <p className="text-body text-label-secondary">{detail.requirement}.</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3">
+                <p className="font-data text-label-tertiary">Current</p>
+                <p className="font-display-hero mt-1 text-[24px] leading-none">
+                  {Math.min(detail.current, detail.target)}
+                  <span className="font-data ml-1 text-label-tertiary">{detail.unit}</span>
+                </p>
+              </div>
+              <div className="rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3">
+                <p className="font-data text-label-tertiary">Reward</p>
+                <p className="font-display mt-1 text-[16px] leading-tight">
+                  Badge · +{POINTS_PER_ACHIEVEMENT} pts
+                </p>
+              </div>
+            </div>
+
             {!detail.unlocked && (
               <div>
                 <div className="h-3 overflow-hidden rounded-[var(--radius-pill)] bg-bg-tertiary">
@@ -215,6 +241,11 @@ export default function ProfilePage() {
                 </p>
               </div>
             )}
+
+            <div>
+              <p className="font-data text-label-tertiary">How to unlock</p>
+              <p className="mt-2 text-body">{detail.description}</p>
+            </div>
           </div>
         )}
       </Sheet>
