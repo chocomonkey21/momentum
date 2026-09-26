@@ -144,7 +144,7 @@ export const HabitCard = memo(function HabitCard({
                     'inline-flex items-center gap-1 text-footnote',
                     closingSoon && 'font-semibold',
                   )}
-                  style={{ color: locked ? 'var(--color-app-orange)' : semantic.warning }}
+                  style={{ color: locked ? 'var(--color-app-orange)' : closingSoon ? semantic.warning : semantic.labelSecondary }}
                 >
                   <Clock size={12} aria-hidden />
                   {locked

@@ -39,6 +39,28 @@ function timeBucket(loggedAt: string): string {
   return 'evenings';
 }
 
+/**
+ * Where completions happen, as a share. Context is only ever tagged on a
+ * completed log (a missed day has no location), so a per-context completion
+ * RATE is always 100% and says nothing — the share of completions is the
+ * honest version of the same question.
+ */
+function topContextShare(logs: HabitLog[], minTagged = 5): { key: ContextTag; share: number } | null {
+  const counts = new Map<ContextTag, number>();
+  let tagged = 0;
+  for (const l of logs) {
+    if (l.completed !== 1 || !l.contextTag) continue;
+    tagged += 1;
+    counts.set(l.contextTag, (counts.get(l.contextTag) ?? 0) + 1);
+  }
+  if (tagged < minTagged) return null;
+  let top: { key: ContextTag; share: number } | null = null;
+  for (const [key, n] of counts) {
+    if (!top || n / tagged > top.share) top = { key, share: n / tagged };
+  }
+  return top;
+}
+
 /** Best-supported bucket with at least `minTotal` observations. */
 function bestOf(map: Map<string, Bucket>, minTotal = 2): { key: string; rate: number } | null {
   let best: { key: string; rate: number } | null = null;
@@ -54,23 +76,22 @@ function bestOf(map: Map<string, Bucket>, minTotal = 2): { key: string; rate: nu
 export function habitInsight(habitName: string, logs: HabitLog[]): string | null {
   if (logs.length < MIN_LOGS_FOR_INSIGHT) return null;
 
-  const byContext = new Map<string, Bucket>();
   const byWeekpart = new Map<string, Bucket>();
   const moodOnDone: number[] = [];
 
   for (const log of logs) {
+    if (log.skipped) continue;
     const done = log.completed === 1;
-    if (log.contextTag) tally(byContext, log.contextTag, done);
     const dow = dayKeyToDate(log.date).getDay();
     tally(byWeekpart, dow === 0 || dow === 6 ? 'weekends' : 'weekdays', done);
     if (done && log.moodTag) moodOnDone.push(log.moodTag);
   }
 
-  const ctx = bestOf(byContext);
-  if (ctx && ctx.rate >= 0.6) {
-    return `${habitName} sticks best when you're ${CONTEXT_LABELS[ctx.key as ContextTag]} — ${Math.round(
-      ctx.rate * 100,
-    )}% of those days got done.`;
+  const ctx = topContextShare(logs);
+  if (ctx && ctx.share >= 0.6) {
+    return `${Math.round(ctx.share * 100)}% of your ${habitName} completions happen ${
+      CONTEXT_LABELS[ctx.key]
+    } — that's the setting it sticks in.`;
   }
 
   const part = bestOf(byWeekpart);
@@ -93,13 +114,12 @@ export function habitInsight(habitName: string, logs: HabitLog[]): string | null
 export function aggregateInsight(logs: HabitLog[]): string | null {
   if (logs.length < MIN_LOGS_FOR_INSIGHT) return null;
 
-  const byContext = new Map<string, Bucket>();
   const byWeekpart = new Map<string, Bucket>();
   const byTime = new Map<string, Bucket>();
   const moodOnDone: number[] = [];
   for (const log of logs) {
+    if (log.skipped) continue;
     const done = log.completed === 1;
-    if (log.contextTag) tally(byContext, log.contextTag, done);
     const dow = dayKeyToDate(log.date).getDay();
     tally(byWeekpart, dow === 0 || dow === 6 ? 'weekends' : 'weekdays', done);
     tally(byTime, timeBucket(log.loggedAt), done);
@@ -107,12 +127,20 @@ export function aggregateInsight(logs: HabitLog[]): string | null {
   }
 
   const part = bestOf(byWeekpart, 3);
-  const ctx = bestOf(byContext, 3);
+  const otherPart = part && byWeekpart.get(part.key === 'weekdays' ? 'weekends' : 'weekdays');
+  const ctx = topContextShare(logs);
+  const ctxClause = ctx
+    ? `most of your wins happen ${CONTEXT_LABELS[ctx.key]} (${Math.round(ctx.share * 100)}%)`
+    : null;
 
-  if (part && ctx) {
-    return `Your habits do best on ${part.key} and when you're ${
-      CONTEXT_LABELS[ctx.key as ContextTag]
-    } — that pairing carries ${Math.round(Math.max(part.rate, ctx.rate) * 100)}% of your completions.`;
+  if (part && otherPart && otherPart.total >= 3 && part.rate - rate(otherPart) >= 0.05) {
+    const lead = `You complete ${Math.round(part.rate * 100)}% of habits on ${part.key} versus ${Math.round(
+      rate(otherPart) * 100,
+    )}% on ${part.key === 'weekdays' ? 'weekends' : 'weekdays'}`;
+    return ctxClause ? `${lead}, and ${ctxClause}.` : `${lead}.`;
+  }
+  if (ctxClause) {
+    return `Your consistency holds across the week, and ${ctxClause}.`;
   }
   if (part) {
     return `Your habits do best on ${part.key} — ${Math.round(part.rate * 100)}% completion there.`;

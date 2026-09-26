@@ -15,6 +15,7 @@ import { savePomodoroSession, getPomodoroSessions, syncAchievements } from '@/db
 import type { PomodoroSession } from '@/db/schema';
 import { semantic, chartHex, palette } from '@/theme/theme';
 import { cn } from '@/lib/cn';
+import { todayKey, toDayKey } from '@/lib/dates';
 
 const PRESETS = [25, 50, 90];
 const MIN_CUSTOM_MINUTES = 25;
@@ -177,10 +178,12 @@ function FocusScreen() {
   const secs = remaining % 60;
   const idle = !running && !startedAt;
 
-  const todaySessions = (sessions ?? []).filter(
-    (s) => s.startTime.slice(0, 10) === new Date().toISOString().slice(0, 10),
-  );
-  const completedSessions = (sessions ?? []).filter((session) => session.completed === 1);
+  // Local day, not the UTC slice of the ISO string — otherwise sessions near
+  // midnight land on the wrong day for anyone off UTC.
+  const today = todayKey();
+  const todaySessions = (sessions ?? []).filter((s) => toDayKey(new Date(s.startTime)) === today);
+  const earlierSessions = (sessions ?? []).filter((s) => toDayKey(new Date(s.startTime)) !== today);
+  const completedSessions = todaySessions.filter((session) => session.completed === 1);
   const totalFocusMinutes = completedSessions.reduce((sum, session) => sum + session.durationMinutes, 0);
 
   return (
@@ -412,11 +415,11 @@ function FocusScreen() {
               })}
             </ul>
           )}
-          {sessions.length > 0 && (
+          {earlierSessions.length > 0 && (
             <div className="mt-6">
               <h3 className="font-display mb-3 text-title2">Recent sessions</h3>
               <ul className="flex flex-col gap-2">
-                {sessions.slice(0, 5).map((session) => {
+                {earlierSessions.slice(0, 5).map((session) => {
                   const habit = habits.find((candidate) => candidate.id === session.habitId);
                   return (
                     <li key={`recent-${session.id}`} className="flex items-center gap-3 rounded-[var(--radius-block)] bg-bg-secondary px-4 py-3">

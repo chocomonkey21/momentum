@@ -33,6 +33,7 @@ import {
   validateTimeConstraint,
   validateUsername,
 } from '@/lib/validation';
+import { getEmailValidationError } from '@/lib/email';
 
 /**
  * Data access, now backed by Supabase/Postgres instead of Dexie/IndexedDB.
@@ -726,36 +727,66 @@ export async function getFriends(userId: string): Promise<FriendRow[]> {
   });
 }
 
-/**
- * Send a friend request by username.
- *
- * Resolves the handle through find_user_by_username() (migration 0007) — a
- * narrow SECURITY DEFINER RPC that returns id + name for an exact match and
- * nothing else, since RLS otherwise hides every profile row but the caller's
- * own. Every branch below is checked against real backend state (a real
- * account, not the caller, not already connected) before a request is ever
- * inserted — a request can only reach an actual, existing user.
- */
-export async function requestFriendByUsername(
-  userId: string,
-  username: string,
-): Promise<{ ok: boolean; message: string }> {
-  let validUsername: string;
-  try {
-    validUsername = validateUsername(username);
-  } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : 'Enter a valid username.' };
-  }
+/** Accept an incoming request. RLS (friendships_update_involving_me) lets the
+ *  recipient flip the status; the friend_user_id check keeps a sender from
+ *  "accepting" their own outgoing request. */
+export async function acceptFriendRequest(userId: string, friendshipId: number) {
+  const { error } = await supabase
+    .from('friendships')
+    .update({ status: 'accepted' })
+    .eq('id', friendshipId)
+    .eq('friend_user_id', userId)
+    .eq('status', 'pending');
+  fail('accept friend request', error);
+}
 
+export interface UserLookupResult {
+  id: string;
+  name: string;
+}
+
+/**
+ * Resolve a username to an account via find_user_by_username() (migration
+ * 0007) — a narrow SECURITY DEFINER RPC that returns id + name for an exact
+ * match and nothing else, since RLS otherwise hides every profile row but
+ * the caller's own. Used both for the live "is this available" check as the
+ * user types and as the first step of sending a request.
+ */
+export async function lookupUserByUsername(username: string): Promise<UserLookupResult | null> {
+  const validUsername = validateUsername(username);
   const { data, error } = await supabase.rpc('find_user_by_username', {
     p_username: validUsername,
   });
-  if (error) return { ok: false, message: 'Could not look up that username.' };
-  const match = ((data ?? []) as { id: string; name: string }[])[0];
-  if (!match) {
-    return { ok: false, message: `No account found with the username "${validUsername}".` };
-  }
-  if (match.id === userId) return { ok: false, message: "That's your own username." };
+  if (error) throw new Error('Could not look up that username.');
+  return ((data ?? []) as UserLookupResult[])[0] ?? null;
+}
+
+/**
+ * Resolve a registered email to an account via find_user_by_email()
+ * (migration 0010) — same shape and same guarantee as the username lookup
+ * above, for the case where a friend hasn't set a username yet.
+ */
+export async function lookupUserByEmail(email: string): Promise<UserLookupResult | null> {
+  const trimmed = email.trim();
+  const validationError = getEmailValidationError(trimmed);
+  if (validationError) throw new Error(validationError);
+  const { data, error } = await supabase.rpc('find_user_by_email', { p_email: trimmed });
+  if (error) throw new Error('Could not look up that email.');
+  return ((data ?? []) as UserLookupResult[])[0] ?? null;
+}
+
+/**
+ * Send a friend request to an already-resolved account. Every branch below
+ * is checked against real backend state (not the caller, not already
+ * connected) before a request is ever inserted — a request can only reach
+ * an actual, existing user, whether they were found by username or email.
+ */
+async function requestFriendTo(
+  userId: string,
+  match: UserLookupResult,
+  handleForMessage: string,
+): Promise<{ ok: boolean; message: string }> {
+  if (match.id === userId) return { ok: false, message: "That's your own account." };
 
   const { data: existing, error: existingErr } = await supabase
     .from('friendships')
@@ -783,7 +814,41 @@ export async function requestFriendByUsername(
     .from('friendships')
     .insert({ user_id: userId, friend_user_id: match.id, status: 'pending' });
   if (insErr) return { ok: false, message: 'Could not send that request.' };
-  return { ok: true, message: `Request sent to ${match.name} (@${validUsername}).` };
+  return { ok: true, message: `Request sent to ${match.name} (${handleForMessage}).` };
+}
+
+export async function requestFriendByUsername(
+  userId: string,
+  username: string,
+): Promise<{ ok: boolean; message: string }> {
+  let validUsername: string;
+  let match: UserLookupResult | null;
+  try {
+    validUsername = validateUsername(username);
+    match = await lookupUserByUsername(validUsername);
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : 'Enter a valid username.' };
+  }
+  if (!match) {
+    return { ok: false, message: `No account found with the username "${validUsername}".` };
+  }
+  return requestFriendTo(userId, match, `@${validUsername}`);
+}
+
+export async function requestFriendByEmail(
+  userId: string,
+  email: string,
+): Promise<{ ok: boolean; message: string }> {
+  let match: UserLookupResult | null;
+  try {
+    match = await lookupUserByEmail(email);
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : 'Enter a valid email address.' };
+  }
+  if (!match) {
+    return { ok: false, message: `No account is registered with that email.` };
+  }
+  return requestFriendTo(userId, match, match.name);
 }
 
 export interface ChallengeBoard {
@@ -871,13 +936,16 @@ export async function getChallenges(userId: string): Promise<ChallengeBoard[]> {
   // they open the app, so no user's private logs are exposed here.
   const ownHabits = await getActiveHabits(userId);
   const ownLogs = await getAllLogs(ownHabits.flatMap((habit) => (habit.id ? [habit.id] : [])));
+  // A "days" metric (e.g. No-Zero Days) counts distinct days with at least one
+  // completion; every other metric counts completions.
   const ownProgress = new Map(
-    challenges.map((challenge) => [
-      challenge.id,
-      ownLogs.filter(
+    challenges.map((challenge) => {
+      const done = ownLogs.filter(
         (log) => log.completed === 1 && log.date >= challenge.start_date && log.date <= challenge.end_date,
-      ).length,
-    ]),
+      );
+      const countsDays = /\bdays?\b/i.test(challenge.goal_metric);
+      return [challenge.id, countsDays ? new Set(done.map((l) => l.date)).size : done.length];
+    }),
   );
   for (const challenge of challenges) {
     const progress = ownProgress.get(challenge.id) ?? 0;

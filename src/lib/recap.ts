@@ -30,6 +30,7 @@ export function recapSentence(
   outOf: number,
   bestDay: string | null,
   momentumDelta: number,
+  endScore?: number,
 ): string {
   const verdict = verdictFor(completions, outOf);
   const delta =
@@ -37,7 +38,9 @@ export function recapSentence(
       ? `Momentum climbed ${momentumDelta} points.`
       : momentumDelta < 0
         ? `Momentum slipped ${Math.abs(momentumDelta)} points — recoverable, not lost.`
-        : 'Momentum held flat.';
+        : endScore !== undefined && endScore >= 100
+          ? 'Momentum stayed maxed out at 100.'
+          : 'Momentum held flat.';
 
   if (verdict === 'Strong week') {
     return `${habitName} carried the week — ${completions} of ${outOf} days done${
@@ -52,13 +55,24 @@ export function recapSentence(
   return `${habitName} only landed ${completions} of ${outOf} days this week. ${delta} One good day starts the climb back.`;
 }
 
-export function bestDayOfWeek(logs: HabitLog[]): string | null {
+/**
+ * The weekday with the clearly highest completion RATE. Pass several weeks of
+ * logs: inside a single week every weekday occurs once, so a count-based pick
+ * is always a tie that silently resolves to Sunday. Returns null when no day
+ * has enough data or the top rate is tied — no claim beats a false one.
+ */
+export function bestDayOfWeek(logs: HabitLog[], minPerDay = 3): string | null {
   const names = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
-  const counts = new Array(7).fill(0);
+  const done = new Array(7).fill(0);
+  const total = new Array(7).fill(0);
   for (const l of logs) {
-    if (l.completed === 1) counts[new Date(l.date + 'T00:00:00').getDay()] += 1;
+    if (l.skipped) continue;
+    const dow = new Date(l.date + 'T00:00:00').getDay();
+    total[dow] += 1;
+    if (l.completed === 1) done[dow] += 1;
   }
-  const max = Math.max(...counts);
-  if (max === 0) return null;
-  return names[counts.indexOf(max)];
+  const rates = total.map((t, i) => (t >= minPerDay ? done[i] / t : -1));
+  const max = Math.max(...rates);
+  if (max <= 0 || rates.filter((r) => r === max).length > 1) return null;
+  return names[rates.indexOf(max)];
 }

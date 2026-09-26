@@ -140,9 +140,12 @@ export function momentumSeries(
 }
 
 /**
- * "At-risk" — momentum has strictly declined for at least `days` consecutive
- * days up to and including today. A UI-level signal only; it never feeds
- * back into the score itself.
+ * "At-risk" — momentum has strictly declined on each of the last `days`
+ * finished days. A UI-level signal only; it never feeds back into the score.
+ *
+ * The window ends at YESTERDAY, not today: today never decays (replay skips
+ * the penalty until the day is over), so a window ending today always ends
+ * on a flat step and the check could never pass.
  */
 export function isMomentumDeclining(
   logs: MomentumLog[],
@@ -151,8 +154,9 @@ export function isMomentumDeclining(
   pausedAt: string | null = null,
 ): boolean {
   if (pausedAt) return false; // a paused habit is frozen, never "at risk"
-  const start = toDayKey(new Date(new Date(today + 'T00:00:00').getTime() - days * 86400000));
-  const keys = dayKeyRange(start, today);
+  const end = previousDayKey(today);
+  const start = toDayKey(new Date(new Date(end + 'T00:00:00').getTime() - days * 86400000));
+  const keys = dayKeyRange(start, end);
   const series = momentumSeries(logs, keys, today, pausedAt);
   if (series.some((v) => v === null)) return false; // not enough history yet
   for (let i = 1; i < series.length; i++) {

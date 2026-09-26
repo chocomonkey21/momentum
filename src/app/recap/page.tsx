@@ -45,6 +45,7 @@ export default function RecapPage() {
   );
 
   const recaps = useMemo(() => {
+    const eightWeeksBefore = toDayKey(subDays(new Date(), 56));
     return habits.map((habit) => {
       const inWeek = habit.logs.filter((l) => weekKeys.includes(l.date));
       const completions = inWeek.filter((l) => l.completed === 1).length;
@@ -65,8 +66,11 @@ export default function RecapPage() {
           habit.name,
           completions,
           outOf,
-          bestDayOfWeek(inWeek),
+          bestDayOfWeek(
+            habit.logs.filter((l) => l.date <= weekKeys[weekKeys.length - 1] && l.date > eightWeeksBefore),
+          ),
           delta,
+          last ?? undefined,
         ),
       };
     });

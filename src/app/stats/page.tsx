@@ -57,12 +57,18 @@ export default function StatsPage() {
     const previous = daily[22] ?? daily[0] ?? overall;
     const delta = overall - Math.round(previous);
     const band = momentumBand(overall);
-    const status = band === 'strong' ? 'Building' : band === 'steady' ? 'Steady' : 'Recovering';
-    const explanation = insight ?? (delta >= 0
-      ? "You're recovering well. Your consistency is improving."
-      : "A few missed days have dipped your momentum, but the trend is recoverable.");
+    const status = band === 'strong' ? 'Strong' : band === 'steady' ? 'Steady' : 'Recovering';
+    // The insight has its own card below; this line explains the number.
+    const explanation =
+      delta > 0
+        ? `Up ${delta} points on last week — your consistency is compounding.`
+        : delta === 0
+          ? 'Holding steady on last week. Keep the streaks you have alive.'
+          : band === 'strong'
+            ? `Down ${Math.abs(delta)} points on last week — still strong, and a few good days win it back.`
+            : 'A few missed days have dipped your momentum, but the trend is recoverable.';
     return { delta, status, explanation };
-  }, [habits, overall, insight]);
+  }, [habits, overall]);
 
   if (status === 'error') {
     return (
@@ -116,7 +122,7 @@ export default function StatsPage() {
                 />
                 <div className="mt-3 flex items-center justify-between gap-3 font-data text-sm">
                   <span>Momentum status: {momentumSummary.status}</span>
-                  <span>{momentumSummary.delta >= 0 ? '↑' : '↓'} {Math.abs(momentumSummary.delta)}% from last week</span>
+                  <span>{momentumSummary.delta >= 0 ? '↑' : '↓'} {Math.abs(momentumSummary.delta)} pts vs last week</span>
                 </div>
                 <p className="mt-3 max-w-[46ch] text-body leading-relaxed opacity-80">{momentumSummary.explanation}</p>
               </section>
@@ -130,8 +136,12 @@ export default function StatsPage() {
                 />
               </div>
 
-              <MomentumHistoryChart habits={habits} />
+              <MomentumHistoryChart habits={habits} days={days} />
               <section className="mt-4 rounded-[var(--radius-card)] bg-bg-secondary p-5">
+                <div className="mb-4 flex items-baseline justify-between gap-3">
+                  <h3 className="font-display text-headline">Average momentum</h3>
+                  <span className="font-data text-label-tertiary">{range === 'month' ? 'By week' : 'By month'}</span>
+                </div>
                 <MomentumChart habits={habits} days={days} />
               </section>
             </div>

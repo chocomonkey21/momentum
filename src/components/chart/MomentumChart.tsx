@@ -25,6 +25,8 @@ import type { HabitView } from '@/context/AppContext';
  * cards use, so the chart can never disagree with the rows beside it
  * (user-flows.md §10). Aggregation is display-only.
  */
+type Bar = { id: string; label: string; long: string; value: number };
+
 export function MomentumChart({ habits, days }: { habits: HabitView[]; days: number }) {
   const dayKeys = useMemo(() => {
     const end = new Date();
@@ -43,7 +45,7 @@ export function MomentumChart({ habits, days }: { habits: HabitView[]; days: num
     });
   }, [habits, dayKeys]);
 
-  const bars = useMemo(() => {
+  const bars = useMemo<Bar[]>(() => {
     if (days <= 14) {
       return daily.map((d) => ({
         id: d.key,
@@ -51,6 +53,23 @@ export function MomentumChart({ habits, days }: { habits: HabitView[]; days: num
         long: format(new Date(d.key + 'T00:00:00'), 'EEEE d MMMM'),
         value: d.value,
       }));
+    }
+    // Month view: four weekly bars (the last 28 days, oldest first). Grouping
+    // 30 days by calendar month gave two lopsided bars labelled "A" and "S".
+    if (days <= 60) {
+      const recent = daily.slice(-28);
+      const weeks: Bar[] = [];
+      for (let i = 0; i < recent.length; i += 7) {
+        const chunk = recent.slice(i, i + 7);
+        const first = chunk[0].key;
+        weeks.push({
+          id: first,
+          label: format(new Date(first + 'T00:00:00'), 'd MMM'),
+          long: `week of ${format(new Date(first + 'T00:00:00'), 'd MMMM')}`,
+          value: Math.round(chunk.reduce((s, d) => s + d.value, 0) / chunk.length),
+        });
+      }
+      return weeks;
     }
     // Group by month, oldest first; twelve buckets for a year.
     const buckets = new Map<string, { sum: number; n: number; first: string }>();
